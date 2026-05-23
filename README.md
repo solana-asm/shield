@@ -2,13 +2,11 @@
 
 Pure-sBPF-assembly transaction-precondition guards for Solana. Prepend a guard to any transaction; if its check fails, the entire transaction aborts atomically and the destination instruction never runs.
 
-Built with [sbpf](https://github.com/blueshift-gg/sbpf). Design notes live in `../README.md` (project root) and `../.claude/skills/shield-guard-patterns/SKILL.md`.
-
 ## Guards
 
 | Guard | Status | Accounts | Instruction data | Source |
 |---|---|---|---|---|
-| `slot_deadline` | ✅ built | 0 | `u64 max_slot` (LE) | [src/slot_deadline/slot_deadline.s](src/slot_deadline/slot_deadline.s) |
+| `slot_deadline` | ✅ built | 0 | `u64 max_slot` (LE) | [Source](src/slot_deadline/slot_deadline.s) |
 | `slippage` | todo | 1 token acct | `u64 min_amount` | — |
 | `balance_floor` | todo | 1 | `u64 min_lamports` | — |
 | `signer_allowlist` | todo | 1 signer | `u8 count`, `[32]u8 × count` | — |
@@ -31,10 +29,10 @@ Before exiting non-zero, each guard `sol_log_`s a short message so devnet diagno
 ## Build / test workflow
 
 ```bash
-sbpf build                  # compile all .s under src/ into deploy/<name>.so
-sbpf deploy                 # deploy each .so to the configured cluster
-bun install                 # if dependencies haven't been installed
-bun run test                # runs mocha tests against http://127.0.0.1:8899
+sbpf build
+sbpf deploy
+bun install
+bun run test
 ```
 
 `bun run test` expects a local validator with the guard program already deployed. The script reads your Solana CLI keypair from `solana config get` and passes it via the `SIGNER` env var.
@@ -48,4 +46,8 @@ A signer can attach `slot_deadline(N)` to any transaction to enforce "this trans
 - Single syscall: `sol_get_clock_sysvar`.
 - Three exit paths, each ending in an explicit `mov64 r0, N; exit`.
 
-See [src/slot_deadline/slot_deadline.s](src/slot_deadline/slot_deadline.s) for the implementation and [tests/slot_deadline.test.ts](tests/slot_deadline.test.ts) for the success / deadline-missed / malformed-input cases.
+See the [assembly](src/slot_deadline/slot_deadline.s) and the [tests](tests/slot_deadline.test.ts) covering success, deadline-missed, and malformed-input.
+
+## License
+
+[MIT](LICENSE)
