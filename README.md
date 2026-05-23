@@ -6,7 +6,7 @@ Pure-sBPF-assembly transaction-precondition guards for Solana. Prepend a guard t
 
 | Guard | Status | Accounts | Instruction data | Source |
 |---|---|---|---|---|
-| `slot_deadline` | ✅ built | 0 | `u64 max_slot` (LE) | [Source](src/slot_deadline/slot_deadline.s) |
+| `slot_deadline` | Done | 0 | `u64 max_slot` (LE) | [Source](src/slot_deadline/slot_deadline.s) |
 | `slippage` | todo | 1 token acct | `u64 min_amount` | — |
 | `balance_floor` | todo | 1 | `u64 min_lamports` | — |
 | `signer_allowlist` | todo | 1 signer | `u8 count`, `[32]u8 × count` | — |

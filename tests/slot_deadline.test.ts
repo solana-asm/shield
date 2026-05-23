@@ -14,9 +14,10 @@ const program = programKeypair.publicKey
 const signerSeed = JSON.parse(process.env.SIGNER!)
 const signer = Keypair.fromSecretKey(new Uint8Array(signerSeed))
 
-const connection = new Connection("http://127.0.0.1:8899", {
-    commitment: "confirmed",
-})
+const connection = new Connection(
+    process.env.RPC_URL ?? "http://127.0.0.1:8899",
+    { commitment: "confirmed" }
+)
 
 // max_slot as little-endian u64
 const u64LE = (n: bigint): Buffer => {

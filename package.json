@@ -6,7 +6,10 @@
   "license": "MIT",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "KEYPAIR=$(solana config get | grep Keypair | cut -b 15-) && cross-env SIGNER=$(cat $KEYPAIR) mocha --import=tsx tests/**/*.ts"
+    "test": "bun run test:local",
+    "test:local": "KEYPAIR=$(solana config get | grep Keypair | cut -b 15-) && cross-env SIGNER=$(cat $KEYPAIR) RPC_URL=http://127.0.0.1:8899 mocha --import=tsx tests/**/*.ts",
+    "test:devnet": "KEYPAIR=$(solana config get | grep Keypair | cut -b 15-) && cross-env SIGNER=$(cat $KEYPAIR) RPC_URL=https://api.devnet.solana.com mocha --import=tsx tests/**/*.ts",
+    "test:mainnet": "KEYPAIR=$(solana config get | grep Keypair | cut -b 15-) && cross-env SIGNER=$(cat $KEYPAIR) RPC_URL=https://api.mainnet-beta.solana.com mocha --import=tsx tests/**/*.ts"
   },
   "dependencies": {
     "@solana/web3.js": "^1.91.8"
