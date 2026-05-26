@@ -7,9 +7,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun run test:local",
-    "test:local": "KEYPAIR=$(solana config get | grep Keypair | cut -b 15-) && cross-env SIGNER=$(cat $KEYPAIR) RPC_URL=http://127.0.0.1:8899 mocha --import=tsx tests/**/*.ts",
-    "test:devnet": "KEYPAIR=$(solana config get | grep Keypair | cut -b 15-) && cross-env SIGNER=$(cat $KEYPAIR) RPC_URL=${RPC_URL:-https://api.devnet.solana.com} mocha --import=tsx tests/**/*.ts",
-    "test:mainnet": "KEYPAIR=$(solana config get | grep Keypair | cut -b 15-) && cross-env SIGNER=$(cat $KEYPAIR) RPC_URL=${RPC_URL:-https://api.mainnet-beta.solana.com} MODE=${MODE:-simulate} mocha --import=tsx tests/**/*.ts",
+    "test:local": "scripts/test.sh http://127.0.0.1:8899",
+    "test:devnet": "scripts/test.sh ${RPC_URL:-https://api.devnet.solana.com}",
+    "test:mainnet": "MODE=${MODE:-simulate} scripts/test.sh ${RPC_URL:-https://api.mainnet-beta.solana.com}",
     "deploy:local": "scripts/deploy.sh http://127.0.0.1:8899",
     "deploy:devnet": "scripts/deploy.sh ${RPC_URL:-https://api.devnet.solana.com}",
     "deploy:mainnet": "scripts/deploy.sh ${RPC_URL:-https://api.mainnet-beta.solana.com}"
