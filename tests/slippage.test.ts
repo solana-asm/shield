@@ -1,6 +1,7 @@
 /// <reference types="mocha" />
 
 import {
+    ComputeBudgetProgram,
     Connection,
     Keypair,
     PublicKey,
@@ -8,7 +9,9 @@ import {
     TransactionInstruction,
 } from "@solana/web3.js"
 import {
+    createAssociatedTokenAccountIdempotentInstruction,
     createMint,
+    createTransferInstruction,
     getAssociatedTokenAddressSync,
     getOrCreateAssociatedTokenAccount,
     mintTo,
@@ -33,7 +36,21 @@ const cluster =
             ? "mainnet"
             : RPC_URL
 
-const CU_CEILING = 100
+const CU_CEILING = 25
+const TX_CU_HAPPY = 175
+const TX_CU_FAIL = 500
+const TX_CU_COMPOSITION = 30_000
+
+const guardCU = (logs: string[]): number | undefined => {
+    const re = new RegExp(
+        `Program ${program.toBase58()} consumed (\\d+) of \\d+ compute units`
+    )
+    for (const line of logs) {
+        const m = line.match(re)
+        if (m) return Number(m[1])
+    }
+    return undefined
+}
 
 const USDC_MINT: Partial<Record<string, string>> = {
     devnet: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
@@ -66,13 +83,15 @@ const guardIx = (
 
 const buildSignedTx = async (
     tokenAccount: PublicKey,
-    data: Buffer
+    data: Buffer,
+    cuLimit: number
 ): Promise<Transaction> => {
     const block = await connection.getLatestBlockhash()
     const tx = new Transaction()
     tx.feePayer = signer.publicKey
     tx.recentBlockhash = block.blockhash
     tx.lastValidBlockHeight = block.lastValidBlockHeight
+    tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }))
     tx.add(guardIx(tokenAccount, data))
     tx.sign(signer)
     return tx
@@ -137,6 +156,7 @@ describe(`slippage guard [${cluster}, MODE=${MODE}]`, function () {
     this.timeout(60_000)
 
     let reportedCU: number | undefined
+    let tokenMint: PublicKey | null = null
     let tokenAccount: PublicKey | null = null
     let tokenBalance: bigint = 0n
 
@@ -144,7 +164,7 @@ describe(`slippage guard [${cluster}, MODE=${MODE}]`, function () {
         // On local validator: mint a throwaway test token + ATA + balance.
         // On devnet/mainnet: use the real USDC mint and the signer's ATA.
         if (cluster === "local") {
-            const mint = await createMint(
+            tokenMint = await createMint(
                 connection,
                 signer,
                 signer.publicKey,
@@ -154,13 +174,13 @@ describe(`slippage guard [${cluster}, MODE=${MODE}]`, function () {
             const ata = await getOrCreateAssociatedTokenAccount(
                 connection,
                 signer,
-                mint,
+                tokenMint,
                 signer.publicKey
             )
             await mintTo(
                 connection,
                 signer,
-                mint,
+                tokenMint,
                 ata.address,
                 signer.publicKey,
                 1_000_000n
@@ -179,8 +199,8 @@ describe(`slippage guard [${cluster}, MODE=${MODE}]`, function () {
             return this.skip()
         }
 
-        const mint = new PublicKey(mintAddr)
-        const ata = getAssociatedTokenAddressSync(mint, signer.publicKey)
+        tokenMint = new PublicKey(mintAddr)
+        const ata = getAssociatedTokenAddressSync(tokenMint, signer.publicKey)
 
         const bal = await connection.getTokenAccountBalance(ata).catch(() => null)
         if (!bal) {
@@ -194,17 +214,17 @@ describe(`slippage guard [${cluster}, MODE=${MODE}]`, function () {
     })
 
     it("succeeds when token.amount >= min", async () => {
-        const tx = await buildSignedTx(tokenAccount!, u64LE(0n))
+        const tx = await buildSignedTx(tokenAccount!, u64LE(0n), TX_CU_HAPPY)
         const result = await runTx(tx)
         if (result.signature) console.log(`      → ${explorerLink(result.signature)}`)
         expect(result.err, JSON.stringify(result.logs)).to.equal(null)
-        reportedCU = result.cu
-        expect(reportedCU, "no CU reported").to.be.a("number")
-        expect(reportedCU!).to.be.lessThan(CU_CEILING)
+        reportedCU = guardCU(result.logs)
+        expect(reportedCU, "no guard CU found in logs").to.be.a("number")
+        expect(reportedCU!).to.be.at.most(CU_CEILING)
     })
 
     it("fails with exit 1 when token.amount < min", async () => {
-        const tx = await buildSignedTx(tokenAccount!, u64LE(0xffffffffffffffffn))
+        const tx = await buildSignedTx(tokenAccount!, u64LE(0xffffffffffffffffn), TX_CU_FAIL)
         const result = await runTx(tx)
         if (result.signature) console.log(`      → ${explorerLink(result.signature)}`)
         expect(result.err).to.not.equal(null)
@@ -214,13 +234,57 @@ describe(`slippage guard [${cluster}, MODE=${MODE}]`, function () {
     })
 
     it("fails with exit 2 on malformed instruction data", async () => {
-        const tx = await buildSignedTx(tokenAccount!, Buffer.alloc(7))
+        const tx = await buildSignedTx(tokenAccount!, Buffer.alloc(7), TX_CU_FAIL)
         const result = await runTx(tx)
         if (result.signature) console.log(`      → ${explorerLink(result.signature)}`)
         expect(result.err).to.not.equal(null)
         const logs = result.logs.join("\n")
         expect(logs).to.include("bad ix data")
         expect(logs).to.match(/custom program error: 0x2\b/)
+    })
+
+    it("composes guard + token transfer", async function () {
+        if (MODE !== "send") return this.skip()
+        if (!tokenAccount || !tokenMint) return this.skip()
+
+        const TRANSFER_AMOUNT = 1_000n
+        if (tokenBalance < TRANSFER_AMOUNT * 2n) {
+            console.log(`      skip: balance ${tokenBalance} below 2 * transfer`)
+            return this.skip()
+        }
+        const MIN_AMOUNT = tokenBalance / 2n
+
+        const recipient = Keypair.generate().publicKey
+        const recipientAta = getAssociatedTokenAddressSync(tokenMint, recipient)
+
+        const block = await connection.getLatestBlockhash()
+        const tx = new Transaction()
+        tx.feePayer = signer.publicKey
+        tx.recentBlockhash = block.blockhash
+        tx.lastValidBlockHeight = block.lastValidBlockHeight
+        tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: TX_CU_COMPOSITION }))
+        tx.add(guardIx(tokenAccount, u64LE(MIN_AMOUNT)))
+        tx.add(
+            createAssociatedTokenAccountIdempotentInstruction(
+                signer.publicKey,
+                recipientAta,
+                recipient,
+                tokenMint
+            )
+        )
+        tx.add(
+            createTransferInstruction(
+                tokenAccount,
+                recipientAta,
+                signer.publicKey,
+                TRANSFER_AMOUNT
+            )
+        )
+        tx.sign(signer)
+
+        const result = await runTx(tx)
+        if (result.signature) console.log(`      → ${explorerLink(result.signature)}`)
+        expect(result.err, JSON.stringify(result.logs)).to.equal(null)
     })
 
     after(() => {
