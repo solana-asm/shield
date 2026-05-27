@@ -105,6 +105,7 @@ Live on devnet and mainnet at the same addresses.
 | `slot_deadline` | `SLDyTxMbunLA51WADZKpXNZ49mFnhsPxtZSp4Rbr4ja` |
 | `slippage` | `SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps` |
 | `balance_floor` | `SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb` |
+| `signer_allowlist` | `SLDPp75MazNodaDGQVqduNNGYYbJVYk3EKWLFppYtvh` |
 
 ## Examples
 
@@ -118,7 +119,7 @@ MODE=send bun run example:devnet    # actually submit (default is simulate)
 
 ## Roadmap
 
-Additional guards on the roadmap (see the [main Guards table](../README.md#guards)): `signer_allowlist`, `fee_ceiling`, `pyth_freshness`, `memo_audit`, `nonce_guard`. Each will land as a new builder under the same import path.
+Additional guards on the roadmap (see the [main Guards table](../README.md#guards)): `fee_ceiling`, `pyth_freshness`, `memo_audit`, `nonce_guard`. Each will land as a new builder under the same import path.
 
 ## License
 

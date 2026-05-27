@@ -65,7 +65,7 @@ See [`sdk/README.md`](sdk/README.md) for the full API, and [`sdk/examples/`](sdk
 | `slot_deadline` | Done | 0 | `u64 max_slot` (LE) | 152 | [src](src/slot_deadline/slot_deadline.s) |
 | `slippage` | Done | 1 token acct | `u64 min_amount` (LE) | 7 | [src](src/slippage/slippage.s) |
 | `balance_floor` | Done | 1 | `u64 min_lamports` (LE) | 7 | [src](src/balance_floor/balance_floor.s) |
-| `signer_allowlist` | todo | 1 signer | `u8 count`, `[32]u8 × count` | - | - |
+| `signer_allowlist` | Done | 1 signer | `u8 count`, `[32]u8 × count` | 25 (N=1) | [src](src/signer_allowlist/signer_allowlist.s) |
 | `fee_ceiling` | todo | 1 sysvar | `u64 max_micro_lamports` | - | - |
 | `pyth_freshness` | todo | 1 price acct | `u64 max_age_slots` | - | - |
 | `memo_audit` | todo | 0 | UTF-8 bytes | - | - |
@@ -80,6 +80,7 @@ Live on devnet and mainnet at the same addresses. Both clusters share the keypai
 | `slot_deadline` | `SLDyTxMbunLA51WADZKpXNZ49mFnhsPxtZSp4Rbr4ja` |
 | `slippage` | `SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps` |
 | `balance_floor` | `SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb` |
+| `signer_allowlist` | `SLDPp75MazNodaDGQVqduNNGYYbJVYk3EKWLFppYtvh` |
 
 ## Exit codes (uniform across guards)
 
@@ -141,6 +142,18 @@ Attach `balance_floor(min_lamports)` with any account as account 0 to enforce "t
 - 7 CU on the happy path.
 
 [assembly](src/balance_floor/balance_floor.s) · [integration test](tests/balance_floor.test.ts) · [example](sdk/examples/balance_floor.ts)
+
+## signer_allowlist
+
+Attach `signer_allowlist([pubkeys])` with the transaction signer as account 0 to enforce "the signer of this transaction must be one of these N pubkeys, or fail." Useful for gating keeper actions, multi-bot setups, and off-chain-signed intents (pair with `slot_deadline` to bound how long an intent stays valid).
+
+- Stateless, 1 read-only signer account, `1 + 32*N` bytes of instruction data.
+- No syscalls. Pure memory reads.
+- Cost scales linearly with N: roughly `17 + 11*N` CU. 25 CU for N=1, ~50 CU for N=3.
+
+The guard also verifies the account's on-chain `is_signer` byte equals 1 (not just trusting the SDK to set `AccountMeta.isSigner = true`). If you build the instruction from a different SDK and forget to mark the account as a signer, the program exits 3 (invalid account) rather than silently accepting any pubkey.
+
+[assembly](src/signer_allowlist/signer_allowlist.s) · [integration test](tests/signer_allowlist.test.ts)
 
 ## Repo layout
 
