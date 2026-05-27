@@ -1,16 +1,16 @@
 # @solana-asm/shield
 
-TypeScript helpers for building Shield guard instructions. Each function returns a `TransactionInstruction` you prepend to your transaction.
+TypeScript builders for [Shield](../README.md) transaction guards. Each function returns a `TransactionInstruction` you prepend to your transaction. If a guard's check fails, Solana aborts the whole transaction atomically.
 
 ## Install
 
-Inside this workspace:
-
 ```bash
-bun install
+npm install @solana-asm/shield @solana/web3.js
 ```
 
-## Usage
+`@solana/web3.js` is a peer dependency. The package is tree-shakeable; importing one guard does not pull in the others.
+
+## Quick Start
 
 ```ts
 import { Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js"
@@ -18,69 +18,108 @@ import {
     slotDeadlineIx,
     slippageIx,
     balanceFloorIx,
-    GuardExitCode,
-    parseGuardError,
 } from "@solana-asm/shield"
 
-const SLOT_DEADLINE_PROGRAM = new PublicKey("...")
-const SLIPPAGE_PROGRAM = new PublicKey("...")
-const BALANCE_FLOOR_PROGRAM = new PublicKey("...")
+const SLOT_DEADLINE = new PublicKey("SLDyTxMbunLA51WADZKpXNZ49mFnhsPxtZSp4Rbr4ja")
+const SLIPPAGE = new PublicKey("SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps")
+const BALANCE_FLOOR = new PublicKey("SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb")
 
-const tx = new Transaction()
+const connection = new Connection("https://api.devnet.solana.com")
+const slot = await connection.getSlot()
+const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
 
-tx.add(
-    slotDeadlineIx({
-        programId: SLOT_DEADLINE_PROGRAM,
-        maxSlot: BigInt(currentSlot + 100),
-    })
-)
+const tx = new Transaction({ feePayer: signer.publicKey, blockhash, lastValidBlockHeight })
 
-tx.add(
-    slippageIx({
-        programId: SLIPPAGE_PROGRAM,
-        tokenAccount: userUsdcAta,
-        minAmount: 1_000_000n,
-    })
-)
-
-tx.add(
-    balanceFloorIx({
-        programId: BALANCE_FLOOR_PROGRAM,
-        account: signer.publicKey,
-        minLamports: 1_000_000n,
-    })
-)
-
-tx.add(yourSwapInstruction)
+tx.add(slotDeadlineIx({ programId: SLOT_DEADLINE, maxSlot: BigInt(slot + 100) }))
+tx.add(slippageIx({ programId: SLIPPAGE, tokenAccount, minAmount: 1_000_000n }))
+tx.add(balanceFloorIx({ programId: BALANCE_FLOOR, account: signer.publicKey, minLamports: 1_000n }))
+tx.add(yourDestinationInstruction)
 ```
 
-If any guard's check fails, Solana aborts the entire transaction. The swap instruction never runs.
+## API
+
+### `slotDeadlineIx({ programId, maxSlot })`
+
+Transaction fails if the current slot is past `maxSlot`. No accounts.
+
+```ts
+slotDeadlineIx({
+    programId: SLOT_DEADLINE,
+    maxSlot: 200_000_100n, // bigint or number
+})
+```
+
+### `slippageIx({ programId, tokenAccount, minAmount })`
+
+Transaction fails if `tokenAccount.amount` is less than `minAmount`. `tokenAccount` must be an SPL Token account.
+
+```ts
+slippageIx({
+    programId: SLIPPAGE,
+    tokenAccount: userUsdcAta,
+    minAmount: 1_000_000n,
+})
+```
+
+### `balanceFloorIx({ programId, account, minLamports })`
+
+Transaction fails if `account.lamports` is less than `minLamports`. Works for any account, not just the signer.
+
+```ts
+balanceFloorIx({
+    programId: BALANCE_FLOOR,
+    account: signer.publicKey,
+    minLamports: 5_000_000n,
+})
+```
 
 ## Reading errors
 
 Each guard logs a short string and exits with a numeric code before failing. Parse a failed transaction's logs:
 
 ```ts
-const parsed = parseGuardError(simulation.logs)
-if (parsed?.code === GuardExitCode.ConditionFailed) {
-    // user's slippage / deadline / balance check failed
+import { GuardExitCode, parseGuardError } from "@solana-asm/shield"
+
+const { value } = await connection.simulateTransaction(tx)
+if (value.err) {
+    const parsed = parseGuardError(value.logs ?? [])
+    if (parsed?.code === GuardExitCode.ConditionFailed) {
+        // user's slippage / deadline / balance check failed
+    }
 }
 ```
 
-| Exit code | Meaning |
-|---:|---|
-| `0` | Success |
-| `1` | Condition failed |
-| `2` | Malformed instruction data |
-| `3` | Invalid account |
+| Code | Name | Meaning |
+|---:|---|---|
+| `0` | `Success` | Condition held |
+| `1` | `ConditionFailed` | The guard's check returned false |
+| `2` | `BadInstructionData` | Instruction data was not exactly 8 bytes |
+| `3` | `InvalidAccount` | Required account was missing or wrong type |
 
-## Program IDs
+## Devnet program IDs
 
-The SDK takes program IDs as parameters. Wire them from wherever you keep deployment addresses (env vars, a constants file, etc.). For local development against this repo, derive them from the keypair files in `deploy/`:
+| Guard | Program ID |
+|---|---|
+| `slot_deadline` | `SLDyTxMbunLA51WADZKpXNZ49mFnhsPxtZSp4Rbr4ja` |
+| `slippage` | `SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps` |
+| `balance_floor` | `SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb` |
 
-```ts
-import { Keypair } from "@solana/web3.js"
-import slippageSeed from "../../deploy/slippage-keypair.json"
+For other clusters you deploy the guard programs yourself. From this repo: `bun run deploy:devnet` or `bun run deploy:mainnet`. The program keypairs are committed at `deploy/*-keypair.json` so the addresses stay stable across deploys.
 
-const SLIPPAGE_PROGRAM = Keypair.fromSecretKey(new Uint8Array(slippageSeed)).publicKey
+## Examples
+
+Runnable per-guard demos live in [`examples/`](examples). They share signer / RPC / explorer plumbing through `examples/_shared.ts`.
+
+```bash
+bun run example:devnet              # run every example
+bun run example:devnet slippage     # run one example
+MODE=send bun run example:devnet    # actually submit (default is simulate)
 ```
+
+## Roadmap
+
+Additional guards on the roadmap (see the [main Guards table](../README.md#guards)): `signer_allowlist`, `fee_ceiling`, `pyth_freshness`, `memo_audit`, `nonce_guard`. Each will land as a new builder under the same import path.
+
+## License
+
+[MIT](../LICENSE)

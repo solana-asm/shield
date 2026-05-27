@@ -2,6 +2,8 @@
 
 Pure-sBPF-assembly transaction-precondition guards for Solana. Prepend a guard to any transaction; if its check fails, the entire transaction aborts atomically and the destination instruction never runs.
 
+> npm: [`@solana-asm/shield`](sdk/) · live on devnet · MIT licensed
+
 ## One Liner
 
 Small on-chain safety checks you attach to a Solana transaction. If the check fails, the whole transaction is cancelled.
@@ -35,6 +37,29 @@ Each one is deployed to Solana as its own program with its own address. You don'
 
 Putting it together: a swap with deadline, slippage, and balance-floor protection adds about 166 compute units on top of the swap itself, and works on top of any program you didn't write and can't change.
 
+## Quick Start
+
+```bash
+npm install @solana-asm/shield @solana/web3.js
+```
+
+```ts
+import { Connection, PublicKey, Transaction } from "@solana/web3.js"
+import { slotDeadlineIx, balanceFloorIx } from "@solana-asm/shield"
+
+const SLOT_DEADLINE = new PublicKey("SLDyTxMbunLA51WADZKpXNZ49mFnhsPxtZSp4Rbr4ja")
+const BALANCE_FLOOR = new PublicKey("SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb")
+
+const slot = await connection.getSlot()
+
+const tx = new Transaction()
+tx.add(slotDeadlineIx({ programId: SLOT_DEADLINE, maxSlot: BigInt(slot + 100) }))
+tx.add(balanceFloorIx({ programId: BALANCE_FLOOR, account: signer.publicKey, minLamports: 1_000_000n }))
+tx.add(yourDestinationInstruction)
+```
+
+See [`sdk/README.md`](sdk/README.md) for the full API, and [`sdk/examples/`](sdk/examples/) for runnable per-guard demos.
+
 ## Guards
 
 | Guard | Status | Accounts | Instruction data | CU | Source |
@@ -48,6 +73,14 @@ Putting it together: a swap with deadline, slippage, and balance-floor protectio
 | `memo_audit` | todo | 0 | UTF-8 bytes | - | - |
 | `nonce_guard` | todo (stateful) | 1 PDA | `[32]u8 nonce` | - | - |
 
+## Devnet program IDs
+
+| Guard | Program ID |
+|---|---|
+| `slot_deadline` | `SLDyTxMbunLA51WADZKpXNZ49mFnhsPxtZSp4Rbr4ja` |
+| `slippage` | `SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps` |
+| `balance_floor` | `SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb` |
+
 ## Exit codes (uniform across guards)
 
 | `r0` | Meaning |
@@ -57,17 +90,25 @@ Putting it together: a swap with deadline, slippage, and balance-floor protectio
 | `2` | Malformed instruction data |
 | `3` | Invalid account |
 
-Before exiting non-zero, each guard `sol_log_`s a short message so devnet diagnostics are usable without a custom client (`"deadline missed"`, `"bad ix data"`, …).
+Before exiting non-zero, each guard `sol_log_`s a short message so devnet diagnostics are usable without a custom client (`"deadline missed"`, `"bad ix data"`, `"insufficient"`, `"below floor"`).
 
-## Build / deploy / test workflow
+## Workspace commands
 
 ```bash
-bun install
-sbpf build
-bun run deploy:local
-bun run deploy:local slippage
-bun run test:local
+bun install                       # install root + sdk workspace
+sbpf build                        # build every .s into deploy/*.so
+bun run deploy:local              # deploy all programs to a local validator
+bun run deploy:local slippage     # deploy only the slippage program
+bun run test:local                # mocha integration tests against the deployed programs
+bun run test:local slippage       # run a single integration test file
+bun run test:sdk                  # bun:test unit tests for the SDK
+bun run test:sdk slippage         # run a single SDK test file
+bun run example:devnet            # run every SDK example against devnet (simulate)
+bun run example:devnet slippage   # run a single example
+MODE=send bun run example:devnet  # actually submit the example transactions
 ```
+
+`test:devnet` / `test:mainnet` and `example:local` / `example:mainnet` are also wired with the same shape. `mainnet` defaults to `MODE=simulate` unless you set `MODE=send` explicitly.
 
 ## slot_deadline
 
@@ -77,7 +118,7 @@ Attach `slot_deadline(N)` to enforce "this transaction must execute at slot ≤ 
 - Single syscall: `sol_get_clock_sysvar`.
 - 152 CU on the happy path.
 
-[assembly](src/slot_deadline/slot_deadline.s) · [tests](tests/slot_deadline.test.ts)
+[assembly](src/slot_deadline/slot_deadline.s) · [integration test](tests/slot_deadline.test.ts) · [example](sdk/examples/slot_deadline.ts)
 
 ## slippage
 
@@ -89,7 +130,7 @@ Attach `slippage(min_amount)` with a token account as account 0 to enforce "the 
 
 The SPL Token `amount` field lives at byte 64 of the account data, which the aligned loader maps at `r1 + 0xA0`. Because the per-account block size depends on `data.len()`, this guard's `INSTRUCTION_DATA_LEN` is at `0x2910` (not the `0x2868` used by zero-data-account guards).
 
-[assembly](src/slippage/slippage.s) · [tests](tests/slippage.test.ts)
+[assembly](src/slippage/slippage.s) · [integration test](tests/slippage.test.ts) · [example](sdk/examples/slippage.ts)
 
 ## balance_floor
 
@@ -99,8 +140,25 @@ Attach `balance_floor(min_lamports)` with any account as account 0 to enforce "t
 - No syscalls.
 - 7 CU on the happy path.
 
-[assembly](src/balance_floor/balance_floor.s) · [tests](tests/balance_floor.test.ts)
+[assembly](src/balance_floor/balance_floor.s) · [integration test](tests/balance_floor.test.ts) · [example](sdk/examples/balance_floor.ts)
+
+## Repo layout
+
+```
+src/                  guard programs, one folder per guard (*.s)
+deploy/               compiled *.so and program keypairs
+tests/                mocha integration tests against deployed programs
+sdk/                  @solana-asm/shield TypeScript client
+  src/                builders, errors, util
+  test/               offline bun:test unit tests
+  examples/           runnable per-guard demos
+scripts/              deploy.sh, test.sh, test-sdk.sh, example.sh
+```
+
+## Contributing
+
+New guards follow the pattern in `src/<name>/<name>.s`: keep it stateless when possible, match the uniform exit codes, log a short message before any non-zero exit. Add a matching folder in `sdk/src/`, a `bun:test` unit test in `sdk/test/`, a runnable example in `sdk/examples/`, and an entry in the Guards table above. Open a PR against `main`.
 
 ## License
 
-[LICENSE](LICENSE)
+[MIT](LICENSE)
