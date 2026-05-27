@@ -1,6 +1,7 @@
 build/**/*
 deploy/**/*
 node_modules
+sdk/dist
 .sbpf
 .DS_Store
 .vscode

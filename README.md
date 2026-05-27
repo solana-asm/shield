@@ -2,8 +2,6 @@
 
 Pure-sBPF-assembly transaction-precondition guards for Solana. Prepend a guard to any transaction; if its check fails, the entire transaction aborts atomically and the destination instruction never runs.
 
-> npm: [`@solana-asm/shield`](sdk/) · live on devnet · MIT licensed
-
 ## One Liner
 
 Small on-chain safety checks you attach to a Solana transaction. If the check fails, the whole transaction is cancelled.

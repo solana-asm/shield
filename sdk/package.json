@@ -3,13 +3,31 @@
     "version": "0.1.0",
     "description": "Client SDK for composing Shield transaction guards",
     "license": "MIT",
-    "main": "src/index.ts",
-    "types": "src/index.ts",
-    "files": ["src", "dist"],
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": ["dist"],
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/solana-asm/shield.git",
+        "directory": "sdk"
+    },
+    "homepage": "https://github.com/solana-asm/shield#readme",
+    "bugs": "https://github.com/solana-asm/shield/issues",
+    "keywords": [
+        "solana",
+        "sbpf",
+        "guards",
+        "transaction",
+        "slippage"
+    ],
     "scripts": {
         "typecheck": "tsc --noEmit",
         "test": "bun test",
-        "build": "tsc -p tsconfig.build.json"
+        "build": "tsc -p tsconfig.build.json",
+        "prepublishOnly": "bun run build"
     },
     "peerDependencies": {
         "@solana/web3.js": "^1.91.8"
