@@ -17,7 +17,10 @@
     "test:mainnet": "MODE=${MODE:-simulate} scripts/test.sh ${RPC_URL:-https://api.mainnet-beta.solana.com}",
     "deploy:local": "scripts/deploy.sh http://127.0.0.1:8899",
     "deploy:devnet": "scripts/deploy.sh ${RPC_URL:-https://api.devnet.solana.com}",
-    "deploy:mainnet": "scripts/deploy.sh ${RPC_URL:-https://api.mainnet-beta.solana.com}"
+    "deploy:mainnet": "scripts/deploy.sh ${RPC_URL:-https://api.mainnet-beta.solana.com}",
+    "release:patch": "cd sdk && npm version patch -m 'sdk: release v%s'",
+    "release:minor": "cd sdk && npm version minor -m 'sdk: release v%s'",
+    "release:major": "cd sdk && npm version major -m 'sdk: release v%s'"
   },
   "dependencies": {
     "@solana-asm/shield": "workspace:*",
