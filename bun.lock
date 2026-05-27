@@ -5,6 +5,7 @@
     "": {
       "name": "shield",
       "dependencies": {
+        "@solana-asm/shield": "workspace:*",
         "@solana/spl-token": "^0.4.14",
         "@solana/web3.js": "^1.91.8",
       },
@@ -17,6 +18,18 @@
         "mocha": "^10.4.0",
         "tsx": "^4.11.0",
         "typescript": "^6.0.3",
+      },
+    },
+    "sdk": {
+      "name": "@solana-asm/shield",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@solana/web3.js": "^1.91.8",
+        "@types/node": "^25.9.1",
+        "typescript": "^6.0.3",
+      },
+      "peerDependencies": {
+        "@solana/web3.js": "^1.91.8",
       },
     },
   },
@@ -78,6 +91,8 @@
     "@noble/curves": ["@noble/curves@1.9.7", "", { "dependencies": { "@noble/hashes": "1.8.0" } }, "sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw=="],
 
     "@noble/hashes": ["@noble/hashes@1.8.0", "", {}, "sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A=="],
+
+    "@solana-asm/shield": ["@solana-asm/shield@workspace:sdk"],
 
     "@solana/buffer-layout": ["@solana/buffer-layout@4.0.1", "", { "dependencies": { "buffer": "~6.0.3" } }, "sha512-E1ImOIAD1tBZFRdjeM4/pzTiTApC0AOBGwyAMS4fwIodCWArzJ3DWdoh8cKxeFM2fElkxBh2Aqts1BPC373rHA=="],
 

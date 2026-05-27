@@ -4,8 +4,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "workspaces": ["sdk"],
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && cd sdk && tsc --noEmit",
     "test": "bun run test:local",
     "test:local": "scripts/test.sh http://127.0.0.1:8899",
     "test:devnet": "scripts/test.sh ${RPC_URL:-https://api.devnet.solana.com}",
@@ -15,6 +16,7 @@
     "deploy:mainnet": "scripts/deploy.sh ${RPC_URL:-https://api.mainnet-beta.solana.com}"
   },
   "dependencies": {
+    "@solana-asm/shield": "workspace:*",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.91.8"
   },
