@@ -26,6 +26,7 @@ fi
 EXAMPLES=(
   slot_deadline
   balance_floor
+  signer_allowlist
   slippage
   compose-guards
 )

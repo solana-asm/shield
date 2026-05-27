@@ -73,6 +73,20 @@ balanceFloorIx({
 })
 ```
 
+### `signerAllowlistIx({ programId, signer, allowed })`
+
+Transaction fails unless the signer's pubkey is in `allowed`. The on-chain program also verifies the account's `is_signer` byte (defense in depth), so the `AccountMeta` is always built with `isSigner: true`.
+
+```ts
+signerAllowlistIx({
+    programId: SIGNER_ALLOWLIST,
+    signer: keeper.publicKey,
+    allowed: [keeperA.publicKey, keeperB.publicKey, keeperC.publicKey],
+})
+```
+
+Cost scales linearly with the list size: roughly `17 + 11*N` CU. `allowed` is capped at 255 entries (`count` is a `u8`); in practice the transaction-size limit bites first around N=38. Throws `RangeError` if you pass more than 255 entries.
+
 ## Reading errors
 
 Each guard logs a short string and exits with a numeric code before failing. Parse a failed transaction's logs:
