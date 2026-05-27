@@ -2,6 +2,39 @@
 
 Pure-sBPF-assembly transaction-precondition guards for Solana. Prepend a guard to any transaction; if its check fails, the entire transaction aborts atomically and the destination instruction never runs.
 
+## One Liner
+
+Small on-chain safety checks you attach to a Solana transaction. If the check fails, the whole transaction is cancelled.
+
+## Core Idea
+
+Most Solana actions have "what if" worries attached to them. What if the swap pays out way less than I expected? What if my keeper bot runs too late? What if this transfer drains my account below rent? Today, you either trust the program you're calling to check these things, or you skip the check.
+
+Shield gives you a third option. Each "what if" becomes its own tiny program. You stick the check in front of your real action in the same transaction. Solana already has a rule: if any step of a transaction fails, the whole transaction is thrown out. So if the check says "no", the swap (or transfer, or mint, or whatever) never happens. No partial progress, no cleanup, no risk.
+
+The checks are written in raw Solana machine code instead of a framework, so they are small (a few hundred bytes) and fast (often under 10 units of compute, which is roughly nothing).
+
+## What It Is
+
+A set of single-purpose Solana programs. Each one answers one yes/no question:
+
+- `slot_deadline`: is it still early enough for this transaction to be valid?
+- `slippage`: does this token account hold at least N tokens?
+- `balance_floor`: does this account hold at least N lamports (SOL)?
+- More planned (signer allowlist, fee ceiling, Pyth price freshness, memo audit, replay protection). See the Guards table below.
+
+Each one is deployed to Solana as its own program with its own address. You don't install a library. You just point your transaction at the guard's program ID and pass it the numbers it needs to check.
+
+## How It Works
+
+1. **You build a transaction with the check in front.** Normally a transaction has one instruction (e.g. "swap A for B"). With Shield, you put a guard instruction in front: "check that I will get at least 100 tokens, then do the swap."
+2. **Solana runs the steps in order.** First the guard, then your real action. If the guard says "condition met", Solana moves on to the swap. If the guard says "condition failed", Solana stops and undoes everything. Your wallet, the swap pool, every account involved goes back to how it was before the transaction started.
+3. **The guard does a tiny amount of work.** It reads the number you gave it (for example, the minimum tokens you'll accept), reads the matching number from the account (the actual token balance), and compares them. If the actual number is good enough, it returns success. If not, it logs a short error like `"slippage exceeded"` and returns failure.
+4. **Why it's so cheap.** Solana hands the guard's memory to it already laid out. The guard doesn't have to ask for it, parse it, or call any helper functions. For most guards this is just a couple of memory reads and one comparison. The `slippage` guard costs 7 compute units. For reference, a Solana transaction has 1.4 million compute units to spend.
+5. **No shared state.** The guards don't talk to each other and don't remember anything between transactions (one exception: `nonce_guard`, which uses a tiny on-chain record to prevent replays). This means you can mix and match them freely.
+
+Putting it together: a swap with deadline, slippage, and balance-floor protection adds about 166 compute units on top of the swap itself, and works on top of any program you didn't write and can't change.
+
 ## Guards
 
 | Guard | Status | Accounts | Instruction data | CU | Source |
