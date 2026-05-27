@@ -96,15 +96,15 @@ if (value.err) {
 | `2` | `BadInstructionData` | Instruction data was not exactly 8 bytes |
 | `3` | `InvalidAccount` | Required account was missing or wrong type |
 
-## Devnet program IDs
+## Program IDs
+
+Live on devnet and mainnet at the same addresses.
 
 | Guard | Program ID |
 |---|---|
 | `slot_deadline` | `SLDyTxMbunLA51WADZKpXNZ49mFnhsPxtZSp4Rbr4ja` |
 | `slippage` | `SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps` |
 | `balance_floor` | `SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb` |
-
-For other clusters you deploy the guard programs yourself. From this repo: `bun run deploy:devnet` or `bun run deploy:mainnet`. The program keypairs are committed at `deploy/*-keypair.json` so the addresses stay stable across deploys.
 
 ## Examples
 

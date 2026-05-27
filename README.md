@@ -71,7 +71,9 @@ See [`sdk/README.md`](sdk/README.md) for the full API, and [`sdk/examples/`](sdk
 | `memo_audit` | todo | 0 | UTF-8 bytes | - | - |
 | `nonce_guard` | todo (stateful) | 1 PDA | `[32]u8 nonce` | - | - |
 
-## Devnet program IDs
+## Program IDs
+
+Live on devnet and mainnet at the same addresses. Both clusters share the keypairs in `deploy/`, so the IDs stay constant.
 
 | Guard | Program ID |
 |---|---|
