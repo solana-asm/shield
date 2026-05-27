@@ -8,6 +8,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit && cd sdk && tsc --noEmit",
     "test": "bun run test:local",
+    "test:sdk": "scripts/test-sdk.sh",
+    "example:local": "scripts/example.sh http://127.0.0.1:8899",
+    "example:devnet": "scripts/example.sh ${RPC_URL:-https://api.devnet.solana.com}",
+    "example:mainnet": "MODE=${MODE:-simulate} scripts/example.sh ${RPC_URL:-https://api.mainnet-beta.solana.com}",
     "test:local": "scripts/test.sh http://127.0.0.1:8899",
     "test:devnet": "scripts/test.sh ${RPC_URL:-https://api.devnet.solana.com}",
     "test:mainnet": "MODE=${MODE:-simulate} scripts/test.sh ${RPC_URL:-https://api.mainnet-beta.solana.com}",
