@@ -63,7 +63,13 @@ EOF
 
 read -r -p "press enter to continue, Ctrl-C to abort: " _
 
-(cd sdk && npm version "$NEW" --no-git-tag-version >/dev/null)
+node -e "
+  const fs = require('fs');
+  const path = 'sdk/package.json';
+  const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+  pkg.version = '${NEW}';
+  fs.writeFileSync(path, JSON.stringify(pkg, null, 4) + '\n');
+"
 
 git add sdk/package.json
 git commit -m "sdk: release ${TAG}"
