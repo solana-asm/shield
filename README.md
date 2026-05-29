@@ -1,7 +1,5 @@
 # shield
 
-## One Liner
-
 Small on-chain safety checks you attach to a Solana transaction. If the check fails, the whole transaction is cancelled.
 
 ## Core Idea
@@ -22,7 +20,6 @@ A set of single-purpose Solana programs. Each one answers one yes/no question:
 - `fee_ceiling`: is this transaction's priority fee bid at or below N micro-lamports per CU?
 - `program_allowlist`: does every other top-level instruction target a program on a caller-supplied allowlist?
 - `compute_unit_floor`: does this transaction declare a `SetComputeUnitLimit` of at least N CU?
-- More planned (replay protection). See the Guards table below.
 
 Each one is deployed to Solana as its own program with its own address. You don't install a library. You just point your transaction at the guard's program ID and pass it the numbers it needs to check.
 
@@ -30,9 +27,9 @@ Each one is deployed to Solana as its own program with its own address. You don'
 
 1. **You build a transaction with the check in front.** Normally a transaction has one instruction (e.g. "swap A for B"). With Shield, you put a guard instruction in front: "check that I will get at least 100 tokens, then do the swap."
 2. **Solana runs the steps in order.** First the guard, then your real action. If the guard says "condition met", Solana moves on to the swap. If the guard says "condition failed", Solana stops and undoes everything. Your wallet, the swap pool, every account involved goes back to how it was before the transaction started.
-3. **The guard does a tiny amount of work.** It reads the number you gave it (for example, the minimum tokens you'll accept), reads the matching number from the account (the actual token balance), and compares them. If the actual number is good enough, it returns success. If not, it logs a short error like `"slippage exceeded"` and returns failure.
+3. **The guard does a tiny amount of work.** It reads the number you gave it (for example, the minimum tokens you'll accept), reads the matching number from the account (the actual token balance), and compares them. If the actual number is good enough, it returns success. If not, it logs a short error like `"insufficient"` and returns failure.
 4. **Why it's so cheap.** Solana hands the guard's memory to it already laid out. The guard doesn't have to ask for it, parse it, or call any helper functions. For most guards this is just a couple of memory reads and one comparison. The `slippage` guard costs 7 compute units. For reference, a Solana transaction has 1.4 million compute units to spend.
-5. **No shared state.** The guards don't talk to each other and don't remember anything between transactions (one exception: `nonce_guard`, which uses a tiny on-chain record to prevent replays). This means you can mix and match them freely.
+5. **No shared state.** The guards don't talk to each other and don't remember anything between transactions, so you can mix and match them freely.
 
 Putting it together: a swap with deadline, slippage, and balance-floor protection adds about 166 compute units on top of the swap itself, and works on top of any program you didn't write and can't change.
 
@@ -72,7 +69,6 @@ See [`sdk/README.md`](sdk/README.md) for the full API, and [`sdk/examples/`](sdk
 | `fee_ceiling` | Done | 1 sysvar | `u64 max_micro_lamports` (LE) | 86 (2-ix) | [src](src/fee_ceiling/fee_ceiling.s) |
 | `program_allowlist` | Done | 1 sysvar | `u8 count`, `[32]u8 × count` | 80 (N=1) | [src](src/program_allowlist/program_allowlist.s) |
 | `compute_unit_floor` | Done | 1 sysvar | `u32 min_units` (LE) | 93 (3-ix) | [src](src/compute_unit_floor/compute_unit_floor.s) |
-| `nonce_guard` | todo (stateful) | 1 PDA | `[32]u8 nonce` | - | - |
 
 ## Program IDs
 
@@ -159,7 +155,7 @@ Attach `signer_allowlist([pubkeys])` with the transaction signer as account 0 to
 
 The guard also verifies the account's on-chain `is_signer` byte equals 1 (not just trusting the SDK to set `AccountMeta.isSigner = true`). If you build the instruction from a different SDK and forget to mark the account as a signer, the program exits 3 (invalid account) rather than silently accepting any pubkey.
 
-[assembly](src/signer_allowlist/signer_allowlist.s) · [integration test](tests/signer_allowlist.test.ts)
+[assembly](src/signer_allowlist/signer_allowlist.s) · [integration test](tests/signer_allowlist.test.ts) · [example](sdk/examples/signer_allowlist.ts)
 
 ## fee_ceiling
 
@@ -171,7 +167,7 @@ Attach `fee_ceiling(max_micro_lamports)` with the Instructions sysvar as account
 
 Unlike the other guards, the Instructions sysvar's per-account input region is bounded at `0x60 + data_len` with no realloc padding and no accessible `rent_epoch`. The guard reads its own `max_micro_lamports` from inside the sysvar's serialization (via the trailing `current_instruction_index` and the offsets table) rather than from the standard input layout that `slippage` and `signer_allowlist` use.
 
-[assembly](src/fee_ceiling/fee_ceiling.s) · [integration test](tests/fee_ceiling.test.ts)
+[assembly](src/fee_ceiling/fee_ceiling.s) · [integration test](tests/fee_ceiling.test.ts) · [example](sdk/examples/fee_ceiling.ts)
 
 ## program_allowlist
 
