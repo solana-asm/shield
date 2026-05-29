@@ -21,7 +21,8 @@ A set of single-purpose Solana programs. Each one answers one yes/no question:
 - `balance_floor`: does this account hold at least N lamports (SOL)?
 - `fee_ceiling`: is this transaction's priority fee bid at or below N micro-lamports per CU?
 - `program_allowlist`: does every other top-level instruction target a program on a caller-supplied allowlist?
-- More planned (compute unit floor, replay protection). See the Guards table below.
+- `compute_unit_floor`: does this transaction declare a `SetComputeUnitLimit` of at least N CU?
+- More planned (replay protection). See the Guards table below.
 
 Each one is deployed to Solana as its own program with its own address. You don't install a library. You just point your transaction at the guard's program ID and pass it the numbers it needs to check.
 
@@ -70,7 +71,7 @@ See [`sdk/README.md`](sdk/README.md) for the full API, and [`sdk/examples/`](sdk
 | `signer_allowlist` | Done | 1 signer | `u8 count`, `[32]u8 × count` | 25 (N=1) | [src](src/signer_allowlist/signer_allowlist.s) |
 | `fee_ceiling` | Done | 1 sysvar | `u64 max_micro_lamports` (LE) | 86 (2-ix) | [src](src/fee_ceiling/fee_ceiling.s) |
 | `program_allowlist` | Done | 1 sysvar | `u8 count`, `[32]u8 × count` | 80 (N=1) | [src](src/program_allowlist/program_allowlist.s) |
-| `compute_unit_floor` | todo | 1 sysvar | `u32 min_units` (LE) | - | - |
+| `compute_unit_floor` | Done | 1 sysvar | `u32 min_units` (LE) | 93 (3-ix) | [src](src/compute_unit_floor/compute_unit_floor.s) |
 | `nonce_guard` | todo (stateful) | 1 PDA | `[32]u8 nonce` | - | - |
 
 ## Program IDs
@@ -85,6 +86,7 @@ Live on devnet and mainnet at the same addresses. Both clusters share the keypai
 | `signer_allowlist` | `SLDPp75MazNodaDGQVqduNNGYYbJVYk3EKWLFppYtvh` |
 | `fee_ceiling` | `SLDM7koS4UYLni15NGVoNW1DMG8ueZJmcGAA6UqMzQQ` |
 | `program_allowlist` | `SLDHxogaum69jT7C8V4jV16AK7jnuQM8y8EfCJ9RGeK` |
+| `compute_unit_floor` | `SLDfqR7EtW1Fgb8y8oEM6aFuho6Yccf8a3j2ebrGQEy` |
 
 ## Exit codes (uniform across guards)
 
@@ -95,7 +97,7 @@ Live on devnet and mainnet at the same addresses. Both clusters share the keypai
 | `2` | Malformed instruction data |
 | `3` | Invalid account |
 
-Before exiting non-zero, each guard `sol_log_`s a short message so devnet diagnostics are usable without a custom client (`"deadline missed"`, `"bad ix data"`, `"insufficient"`, `"below floor"`, `"not allowed"`, `"fee too high"`, `"bad account"`).
+Before exiting non-zero, each guard `sol_log_`s a short message so devnet diagnostics are usable without a custom client (`"deadline missed"`, `"bad ix data"`, `"insufficient"`, `"below floor"`, `"not allowed"`, `"fee too high"`, `"cu too low"`, `"bad account"`).
 
 ## Workspace commands
 
@@ -182,6 +184,18 @@ Attach `program_allowlist([pubkeys])` with the Instructions sysvar as account 0 
 **Implicit self-skip, everything else is explicit.** The guard's own instruction is excluded from the check, so this program does not need to be in the allowlist. Every OTHER top-level ix in the transaction is checked, including `ComputeBudget` (`SetComputeUnitLimit`, `SetComputeUnitPrice`) and any other Shield guards you compose with. If the transaction sets a CU limit, allowlist `ComputeBudget111111111111111111111111111111` too, or the guard exits `1` ("not allowed") at that ix. The composition integration test (`tests/program_allowlist.test.ts`) demonstrates the realistic pattern.
 
 [assembly](src/program_allowlist/program_allowlist.s) · [integration test](tests/program_allowlist.test.ts)
+
+## compute_unit_floor
+
+Attach `compute_unit_floor(min_units)` with the Instructions sysvar as account 0 to enforce "this transaction must declare a `ComputeBudget` `SetComputeUnitLimit` of at least N CU, or fail." Useful for keeper bots and agent flows that want a guaranteed minimum compute budget even when the client forgets to set one or under-allocates, preventing partial execution and surprise `"Computational budget exceeded"` aborts mid-tx.
+
+- Stateless, 1 read-only sysvar account (`Sysvar1nstructions1111111111111111111111111`), 4 bytes of instruction data (`u32 min_units` LE).
+- No syscalls. Walks the Instructions sysvar's offsets table to find every `ComputeBudget` `SetComputeUnitLimit` (disc 2, 5-byte ix data) and compares its u32 units against the floor.
+- 93 CU on a 3-instruction tx (limit + guard + destination); scales linearly with `num_instructions`.
+
+**Strict presence requirement.** The guard exits `1` (`"cu too low"`) if no `SetComputeUnitLimit` is present at all, not only when the value is below floor. Solana's runtime would otherwise apply a default per-ix CU budget in that case; this guard treats explicit allocation as part of the contract. The boundary is non-strict: `units == min_units` passes (`jlt` is strict less-than).
+
+[assembly](src/compute_unit_floor/compute_unit_floor.s) · [integration test](tests/compute_unit_floor.test.ts) · [example](sdk/examples/compute_unit_floor.ts)
 
 ## Repo layout
 
