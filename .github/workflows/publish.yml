@@ -1,4 +1,5 @@
 name: Publish SDK to npm
+run-name: sdk release ${{ github.ref_name }}
 
 on:
   push:
