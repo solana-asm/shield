@@ -103,7 +103,7 @@ feeCeilingIx({
 
 Useful for capping priority fee bids on keeper / agent transactions so a misconfigured client can't quietly burn an order of magnitude more than intended. Pair with `ComputeBudgetProgram.setComputeUnitPrice` from `@solana/web3.js` to set the actual fee. Throws `RangeError` if `maxMicroLamports` is negative or exceeds `u64`.
 
-The guard walks every instruction in the sysvar's serialized data, so cost scales with `num_instructions` in the tx (~150 CU on a typical 3-4 ix transaction).
+The guard walks every instruction in the sysvar's serialized data, so cost scales with `num_instructions` in the tx. Measured at 86 CU on a 2-ix transaction (limit + guard, no match); ~30 CU extra per matched `SetComputeUnitPrice`.
 
 ## Reading errors
 

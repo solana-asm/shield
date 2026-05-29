@@ -69,7 +69,7 @@ See [`sdk/README.md`](sdk/README.md) for the full API, and [`sdk/examples/`](sdk
 | `slippage` | Done | 1 token acct | `u64 min_amount` (LE) | 7 | [src](src/slippage/slippage.s) |
 | `balance_floor` | Done | 1 | `u64 min_lamports` (LE) | 7 | [src](src/balance_floor/balance_floor.s) |
 | `signer_allowlist` | Done | 1 signer | `u8 count`, `[32]u8 × count` | 25 (N=1) | [src](src/signer_allowlist/signer_allowlist.s) |
-| `fee_ceiling` | Done | 1 sysvar | `u64 max_micro_lamports` (LE) | ~150 | [src](src/fee_ceiling/fee_ceiling.s) |
+| `fee_ceiling` | Done | 1 sysvar | `u64 max_micro_lamports` (LE) | 86 (2-ix) | [src](src/fee_ceiling/fee_ceiling.s) |
 | `compute_unit_floor` | todo | 1 sysvar | `u32 min_units` (LE) | - | - |
 | `program_allowlist` | todo | 1 sysvar | `u8 count`, `[32]u8 × count` | - | - |
 | `nonce_guard` | todo (stateful) | 1 PDA | `[32]u8 nonce` | - | - |
@@ -165,7 +165,7 @@ Attach `fee_ceiling(max_micro_lamports)` with the Instructions sysvar as account
 
 - Stateless, 1 read-only sysvar account (`Sysvar1nstructions1111111111111111111111111`), 8 bytes of instruction data.
 - No syscalls. Walks the Instructions sysvar's serialized data to find every `ComputeBudget` instruction and compares any `SetComputeUnitPrice` against the ceiling.
-- ~150 CU on the happy path; scales linearly with `num_instructions` in the tx.
+- 86 CU on a 2-instruction tx (limit + guard, no match); scales linearly with `num_instructions` and adds ~30 CU per `SetComputeUnitPrice` match in the loop.
 
 Unlike the other guards, the Instructions sysvar's per-account input region is bounded at `0x60 + data_len` with no realloc padding and no accessible `rent_epoch`. The guard reads its own `max_micro_lamports` from inside the sysvar's serialization (via the trailing `current_instruction_index` and the offsets table) rather than from the standard input layout that `slippage` and `signer_allowlist` use.
 
