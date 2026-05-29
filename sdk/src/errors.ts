@@ -18,6 +18,11 @@ export const GuardLogMessage = {
         conditionFailed: "below floor",
         badInstructionData: "bad ix data",
     },
+    feeCeiling: {
+        conditionFailed: "fee too high",
+        badInstructionData: "bad ix data",
+        invalidAccount: "bad account",
+    },
 } as const
 
 export type GuardName = keyof typeof GuardLogMessage

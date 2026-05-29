@@ -28,6 +28,7 @@ EXAMPLES=(
   balance_floor
   signer_allowlist
   slippage
+  fee_ceiling
   compose-guards
 )
 

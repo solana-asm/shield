@@ -5,6 +5,7 @@ export {
     signerAllowlistIx,
     type SignerAllowlistArgs,
 } from "./signer_allowlist"
+export { feeCeilingIx, type FeeCeilingArgs } from "./fee_ceiling"
 export {
     GuardExitCode,
     GuardLogMessage,

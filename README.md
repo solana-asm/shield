@@ -44,16 +44,18 @@ npm install @solana-asm/shield @solana/web3.js
 
 ```ts
 import { Connection, PublicKey, Transaction } from "@solana/web3.js"
-import { slotDeadlineIx, balanceFloorIx } from "@solana-asm/shield"
+import { slotDeadlineIx, balanceFloorIx, feeCeilingIx } from "@solana-asm/shield"
 
 const SLOT_DEADLINE = new PublicKey("SLDyTxMbunLA51WADZKpXNZ49mFnhsPxtZSp4Rbr4ja")
 const BALANCE_FLOOR = new PublicKey("SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb")
+const FEE_CEILING   = new PublicKey("SLDM7koS4UYLni15NGVoNW1DMG8ueZJmcGAA6UqMzQQ")
 
 const slot = await connection.getSlot()
 
 const tx = new Transaction()
 tx.add(slotDeadlineIx({ programId: SLOT_DEADLINE, maxSlot: BigInt(slot + 100) }))
 tx.add(balanceFloorIx({ programId: BALANCE_FLOOR, account: signer.publicKey, minLamports: 1_000_000n }))
+tx.add(feeCeilingIx({ programId: FEE_CEILING, maxMicroLamports: 1_000n }))
 tx.add(yourDestinationInstruction)
 ```
 
@@ -82,6 +84,7 @@ Live on devnet and mainnet at the same addresses. Both clusters share the keypai
 | `slippage` | `SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps` |
 | `balance_floor` | `SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb` |
 | `signer_allowlist` | `SLDPp75MazNodaDGQVqduNNGYYbJVYk3EKWLFppYtvh` |
+| `fee_ceiling` | `SLDM7koS4UYLni15NGVoNW1DMG8ueZJmcGAA6UqMzQQ` |
 
 ## Exit codes (uniform across guards)
 

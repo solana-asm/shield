@@ -22,6 +22,8 @@ describe("GuardLogMessage", () => {
         )
         expect(GuardLogMessage.slippage.conditionFailed).toBe("insufficient")
         expect(GuardLogMessage.balanceFloor.conditionFailed).toBe("below floor")
+        expect(GuardLogMessage.feeCeiling.conditionFailed).toBe("fee too high")
+        expect(GuardLogMessage.feeCeiling.invalidAccount).toBe("bad account")
         expect(GuardLogMessage.slotDeadline.badInstructionData).toBe(
             "bad ix data"
         )

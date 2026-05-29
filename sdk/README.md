@@ -18,11 +18,13 @@ import {
     slotDeadlineIx,
     slippageIx,
     balanceFloorIx,
+    feeCeilingIx,
 } from "@solana-asm/shield"
 
 const SLOT_DEADLINE = new PublicKey("SLDyTxMbunLA51WADZKpXNZ49mFnhsPxtZSp4Rbr4ja")
-const SLIPPAGE = new PublicKey("SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps")
+const SLIPPAGE      = new PublicKey("SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps")
 const BALANCE_FLOOR = new PublicKey("SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb")
+const FEE_CEILING   = new PublicKey("SLDM7koS4UYLni15NGVoNW1DMG8ueZJmcGAA6UqMzQQ")
 
 const connection = new Connection("https://api.devnet.solana.com")
 const slot = await connection.getSlot()
@@ -33,6 +35,7 @@ const tx = new Transaction({ feePayer: signer.publicKey, blockhash, lastValidBlo
 tx.add(slotDeadlineIx({ programId: SLOT_DEADLINE, maxSlot: BigInt(slot + 100) }))
 tx.add(slippageIx({ programId: SLIPPAGE, tokenAccount, minAmount: 1_000_000n }))
 tx.add(balanceFloorIx({ programId: BALANCE_FLOOR, account: signer.publicKey, minLamports: 1_000n }))
+tx.add(feeCeilingIx({ programId: FEE_CEILING, maxMicroLamports: 1_000n }))
 tx.add(yourDestinationInstruction)
 ```
 
@@ -87,6 +90,21 @@ signerAllowlistIx({
 
 Cost scales linearly with the list size: roughly `17 + 11*N` CU. `allowed` is capped at 255 entries (`count` is a `u8`); in practice the transaction-size limit bites first around N=38. Throws `RangeError` if you pass more than 255 entries.
 
+### `feeCeilingIx({ programId, maxMicroLamports })`
+
+Transaction fails if any `ComputeBudget` `SetComputeUnitPrice` instruction in the same tx exceeds `maxMicroLamports` per CU. The Instructions sysvar account is wired internally, so the caller passes only the threshold.
+
+```ts
+feeCeilingIx({
+    programId: FEE_CEILING,
+    maxMicroLamports: 1_000n, // micro-lamports per CU
+})
+```
+
+Useful for capping priority fee bids on keeper / agent transactions so a misconfigured client can't quietly burn an order of magnitude more than intended. Pair with `ComputeBudgetProgram.setComputeUnitPrice` from `@solana/web3.js` to set the actual fee. Throws `RangeError` if `maxMicroLamports` is negative or exceeds `u64`.
+
+The guard walks every instruction in the sysvar's serialized data, so cost scales with `num_instructions` in the tx (~150 CU on a typical 3-4 ix transaction).
+
 ## Reading errors
 
 Each guard logs a short string and exits with a numeric code before failing. Parse a failed transaction's logs:
@@ -120,6 +138,7 @@ Live on devnet and mainnet at the same addresses.
 | `slippage` | `SLDChznvxmWVQpGQbweD1oXK8KcaxgaCD1qyDWB3Tps` |
 | `balance_floor` | `SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb` |
 | `signer_allowlist` | `SLDPp75MazNodaDGQVqduNNGYYbJVYk3EKWLFppYtvh` |
+| `fee_ceiling` | `SLDM7koS4UYLni15NGVoNW1DMG8ueZJmcGAA6UqMzQQ` |
 
 ## Examples
 
@@ -133,7 +152,7 @@ MODE=send bun run example:devnet    # actually submit (default is simulate)
 
 ## Roadmap
 
-Additional guards on the roadmap (see the [main Guards table](../README.md#guards)): `fee_ceiling`, `pyth_freshness`, `memo_audit`, `nonce_guard`. Each will land as a new builder under the same import path.
+Additional guards on the roadmap (see the [main Guards table](../README.md#guards)): `compute_unit_floor`, `program_allowlist`, `nonce_guard`. Each will land as a new builder under the same import path.
 
 ## License
 
