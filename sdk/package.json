@@ -1,6 +1,6 @@
 {
     "name": "@solana-asm/shield",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "description": "Client SDK for composing Shield transaction guards",
     "license": "MIT",
     "main": "dist/index.js",
