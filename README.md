@@ -21,7 +21,7 @@ A set of single-purpose Solana programs. Each one answers one yes/no question:
 - `slot_deadline`: is it still early enough for this transaction to be valid?
 - `slippage`: does this token account hold at least N tokens?
 - `balance_floor`: does this account hold at least N lamports (SOL)?
-- More planned (signer allowlist, fee ceiling, Pyth price freshness, memo audit, replay protection). See the Guards table below.
+- More planned (fee ceiling, compute unit floor, program allowlist, replay protection). See the Guards table below.
 
 Each one is deployed to Solana as its own program with its own address. You don't install a library. You just point your transaction at the guard's program ID and pass it the numbers it needs to check.
 
@@ -66,9 +66,9 @@ See [`sdk/README.md`](sdk/README.md) for the full API, and [`sdk/examples/`](sdk
 | `slippage` | Done | 1 token acct | `u64 min_amount` (LE) | 7 | [src](src/slippage/slippage.s) |
 | `balance_floor` | Done | 1 | `u64 min_lamports` (LE) | 7 | [src](src/balance_floor/balance_floor.s) |
 | `signer_allowlist` | Done | 1 signer | `u8 count`, `[32]u8 × count` | 25 (N=1) | [src](src/signer_allowlist/signer_allowlist.s) |
-| `fee_ceiling` | todo | 1 sysvar | `u64 max_micro_lamports` | - | - |
-| `pyth_freshness` | todo | 1 price acct | `u64 max_age_slots` | - | - |
-| `memo_audit` | todo | 0 | UTF-8 bytes | - | - |
+| `fee_ceiling` | todo | 1 sysvar | `u64 max_micro_lamports` (LE) | - | - |
+| `compute_unit_floor` | todo | 1 sysvar | `u32 min_units` (LE) | - | - |
+| `program_allowlist` | todo | 1 sysvar | `u8 count`, `[32]u8 × count` | - | - |
 | `nonce_guard` | todo (stateful) | 1 PDA | `[32]u8 nonce` | - | - |
 
 ## Program IDs
