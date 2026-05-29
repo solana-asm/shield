@@ -105,6 +105,32 @@ Useful for capping priority fee bids on keeper / agent transactions so a misconf
 
 The guard walks every instruction in the sysvar's serialized data, so cost scales with `num_instructions` in the tx. Measured at 86 CU on a 2-ix transaction (limit + guard, no match); ~30 CU extra per matched `SetComputeUnitPrice`.
 
+### `programAllowlistIx({ programId, allowed })`
+
+Transaction fails if any other top-level instruction in the same tx targets a program that is not in `allowed`. The guard's own instruction is implicitly skipped, so this program does not need to be on the list.
+
+```ts
+programAllowlistIx({
+    programId: PROGRAM_ALLOWLIST,
+    allowed: [JUPITER_V6, ComputeBudgetProgram.programId],
+})
+```
+
+Every OTHER top-level ix is checked, including `ComputeBudget` (`SetComputeUnitLimit`, `SetComputeUnitPrice`) and any other Shield guards you compose with. If the transaction sets a CU limit, allowlist `ComputeBudget111111111111111111111111111111` too, or the guard exits `1` ("not allowed") at that ix. ~80 CU on N=1; scales roughly with `num_top_level_ix * average_allowlist_position`. Throws `RangeError` if `allowed` exceeds 255 entries.
+
+### `computeUnitFloorIx({ programId, minUnits })`
+
+Transaction fails if no `ComputeBudget` `SetComputeUnitLimit` is present, or if its u32 value is below `minUnits`. Use to guarantee a minimum compute budget for keeper or agent transactions where the client might forget to set one or under-allocate.
+
+```ts
+computeUnitFloorIx({
+    programId: COMPUTE_UNIT_FLOOR,
+    minUnits: 200_000, // bigint or number, u32 range
+})
+```
+
+Boundary is non-strict: `units == minUnits` passes. ~93 CU on a 3-ix tx (limit + guard + destination). Throws `RangeError` if `minUnits` is negative or exceeds `u32`.
+
 ## Reading errors
 
 Each guard logs a short string and exits with a numeric code before failing. Parse a failed transaction's logs:
@@ -125,7 +151,7 @@ if (value.err) {
 |---:|---|---|
 | `0` | `Success` | Condition held |
 | `1` | `ConditionFailed` | The guard's check returned false |
-| `2` | `BadInstructionData` | Instruction data was not exactly 8 bytes |
+| `2` | `BadInstructionData` | Instruction data did not match the guard's expected layout |
 | `3` | `InvalidAccount` | Required account was missing or wrong type |
 
 ## Program IDs
@@ -139,6 +165,8 @@ Live on devnet and mainnet at the same addresses.
 | `balance_floor` | `SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb` |
 | `signer_allowlist` | `SLDPp75MazNodaDGQVqduNNGYYbJVYk3EKWLFppYtvh` |
 | `fee_ceiling` | `SLDM7koS4UYLni15NGVoNW1DMG8ueZJmcGAA6UqMzQQ` |
+| `program_allowlist` | `SLDHxogaum69jT7C8V4jV16AK7jnuQM8y8EfCJ9RGeK` |
+| `compute_unit_floor` | `SLDfqR7EtW1Fgb8y8oEM6aFuho6Yccf8a3j2ebrGQEy` |
 
 ## Examples
 
@@ -149,10 +177,6 @@ bun run example:devnet              # run every example
 bun run example:devnet slippage     # run one example
 MODE=send bun run example:devnet    # actually submit (default is simulate)
 ```
-
-## Roadmap
-
-Additional guards on the roadmap (see the [main Guards table](../README.md#guards)): `compute_unit_floor`, `program_allowlist`, `nonce_guard`. Each will land as a new builder under the same import path.
 
 ## License
 
