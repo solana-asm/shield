@@ -28,6 +28,11 @@ export const GuardLogMessage = {
         badInstructionData: "bad ix data",
         invalidAccount: "bad account",
     },
+    computeUnitFloor: {
+        conditionFailed: "cu too low",
+        badInstructionData: "bad ix data",
+        invalidAccount: "bad account",
+    },
 } as const
 
 export type GuardName = keyof typeof GuardLogMessage

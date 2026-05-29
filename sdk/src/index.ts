@@ -11,10 +11,14 @@ export {
     type ProgramAllowlistArgs,
 } from "./program_allowlist"
 export {
+    computeUnitFloorIx,
+    type ComputeUnitFloorArgs,
+} from "./compute_unit_floor"
+export {
     GuardExitCode,
     GuardLogMessage,
     parseGuardError,
     type GuardName,
     type ParsedGuardError,
 } from "./errors"
-export { u64LE } from "./util"
+export { u64LE, u32LE } from "./util"
