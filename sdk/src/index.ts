@@ -7,6 +7,10 @@ export {
 } from "./signer_allowlist"
 export { feeCeilingIx, type FeeCeilingArgs } from "./fee_ceiling"
 export {
+    programAllowlistIx,
+    type ProgramAllowlistArgs,
+} from "./program_allowlist"
+export {
     GuardExitCode,
     GuardLogMessage,
     parseGuardError,

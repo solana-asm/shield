@@ -23,6 +23,11 @@ export const GuardLogMessage = {
         badInstructionData: "bad ix data",
         invalidAccount: "bad account",
     },
+    programAllowlist: {
+        conditionFailed: "not allowed",
+        badInstructionData: "bad ix data",
+        invalidAccount: "bad account",
+    },
 } as const
 
 export type GuardName = keyof typeof GuardLogMessage

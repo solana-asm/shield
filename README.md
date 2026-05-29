@@ -1,7 +1,5 @@
 # shield
 
-Pure-sBPF-assembly transaction-precondition guards for Solana. Prepend a guard to any transaction; if its check fails, the entire transaction aborts atomically and the destination instruction never runs.
-
 ## One Liner
 
 Small on-chain safety checks you attach to a Solana transaction. If the check fails, the whole transaction is cancelled.
@@ -22,7 +20,8 @@ A set of single-purpose Solana programs. Each one answers one yes/no question:
 - `slippage`: does this token account hold at least N tokens?
 - `balance_floor`: does this account hold at least N lamports (SOL)?
 - `fee_ceiling`: is this transaction's priority fee bid at or below N micro-lamports per CU?
-- More planned (compute unit floor, program allowlist, replay protection). See the Guards table below.
+- `program_allowlist`: does every other top-level instruction target a program on a caller-supplied allowlist?
+- More planned (compute unit floor, replay protection). See the Guards table below.
 
 Each one is deployed to Solana as its own program with its own address. You don't install a library. You just point your transaction at the guard's program ID and pass it the numbers it needs to check.
 
@@ -70,8 +69,8 @@ See [`sdk/README.md`](sdk/README.md) for the full API, and [`sdk/examples/`](sdk
 | `balance_floor` | Done | 1 | `u64 min_lamports` (LE) | 7 | [src](src/balance_floor/balance_floor.s) |
 | `signer_allowlist` | Done | 1 signer | `u8 count`, `[32]u8 × count` | 25 (N=1) | [src](src/signer_allowlist/signer_allowlist.s) |
 | `fee_ceiling` | Done | 1 sysvar | `u64 max_micro_lamports` (LE) | 86 (2-ix) | [src](src/fee_ceiling/fee_ceiling.s) |
+| `program_allowlist` | Done | 1 sysvar | `u8 count`, `[32]u8 × count` | 80 (N=1) | [src](src/program_allowlist/program_allowlist.s) |
 | `compute_unit_floor` | todo | 1 sysvar | `u32 min_units` (LE) | - | - |
-| `program_allowlist` | todo | 1 sysvar | `u8 count`, `[32]u8 × count` | - | - |
 | `nonce_guard` | todo (stateful) | 1 PDA | `[32]u8 nonce` | - | - |
 
 ## Program IDs
@@ -85,6 +84,7 @@ Live on devnet and mainnet at the same addresses. Both clusters share the keypai
 | `balance_floor` | `SLDwNtfXVRXuW29kMWLkvs8QX6xkdg8qjPuV6WQ25Hb` |
 | `signer_allowlist` | `SLDPp75MazNodaDGQVqduNNGYYbJVYk3EKWLFppYtvh` |
 | `fee_ceiling` | `SLDM7koS4UYLni15NGVoNW1DMG8ueZJmcGAA6UqMzQQ` |
+| `program_allowlist` | `SLDHxogaum69jT7C8V4jV16AK7jnuQM8y8EfCJ9RGeK` |
 
 ## Exit codes (uniform across guards)
 
@@ -95,7 +95,7 @@ Live on devnet and mainnet at the same addresses. Both clusters share the keypai
 | `2` | Malformed instruction data |
 | `3` | Invalid account |
 
-Before exiting non-zero, each guard `sol_log_`s a short message so devnet diagnostics are usable without a custom client (`"deadline missed"`, `"bad ix data"`, `"insufficient"`, `"below floor"`).
+Before exiting non-zero, each guard `sol_log_`s a short message so devnet diagnostics are usable without a custom client (`"deadline missed"`, `"bad ix data"`, `"insufficient"`, `"below floor"`, `"not allowed"`, `"fee too high"`, `"bad account"`).
 
 ## Workspace commands
 
@@ -170,6 +170,18 @@ Attach `fee_ceiling(max_micro_lamports)` with the Instructions sysvar as account
 Unlike the other guards, the Instructions sysvar's per-account input region is bounded at `0x60 + data_len` with no realloc padding and no accessible `rent_epoch`. The guard reads its own `max_micro_lamports` from inside the sysvar's serialization (via the trailing `current_instruction_index` and the offsets table) rather than from the standard input layout that `slippage` and `signer_allowlist` use.
 
 [assembly](src/fee_ceiling/fee_ceiling.s) · [integration test](tests/fee_ceiling.test.ts)
+
+## program_allowlist
+
+Attach `program_allowlist([pubkeys])` with the Instructions sysvar as account 0 to enforce "every other top-level instruction in this transaction targets a program on this allowlist, or fail." Useful for hardening keeper bots and agent flows so a compromised or misconfigured client cannot redirect the transaction to a program the operator never intended.
+
+- Stateless, 1 read-only sysvar account (`Sysvar1nstructions1111111111111111111111111`), `1 + 32*N` bytes of instruction data.
+- No syscalls. Walks the Instructions sysvar's offsets table and compares each top-level ix's 32-byte program_id against the allowlist with an unrolled 4× u64 compare.
+- 80 CU on the minimal happy path (`[guard, one dest ix]`, N=1). Scales roughly with `num_top_level_ix * average_allowlist_position`.
+
+**Implicit self-skip, everything else is explicit.** The guard's own instruction is excluded from the check, so this program does not need to be in the allowlist. Every OTHER top-level ix in the transaction is checked, including `ComputeBudget` (`SetComputeUnitLimit`, `SetComputeUnitPrice`) and any other Shield guards you compose with. If the transaction sets a CU limit, allowlist `ComputeBudget111111111111111111111111111111` too, or the guard exits `1` ("not allowed") at that ix. The composition integration test (`tests/program_allowlist.test.ts`) demonstrates the realistic pattern.
+
+[assembly](src/program_allowlist/program_allowlist.s) · [integration test](tests/program_allowlist.test.ts)
 
 ## Repo layout
 
