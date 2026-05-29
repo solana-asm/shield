@@ -73,7 +73,7 @@ node -e "
 
 git add sdk/package.json
 git commit -m "sdk: release ${TAG}"
-git tag "$TAG"
+git tag -a "$TAG" -m "sdk: release ${TAG}"
 git push --follow-tags
 
 cat <<EOF
