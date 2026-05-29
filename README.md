@@ -21,7 +21,8 @@ A set of single-purpose Solana programs. Each one answers one yes/no question:
 - `slot_deadline`: is it still early enough for this transaction to be valid?
 - `slippage`: does this token account hold at least N tokens?
 - `balance_floor`: does this account hold at least N lamports (SOL)?
-- More planned (fee ceiling, compute unit floor, program allowlist, replay protection). See the Guards table below.
+- `fee_ceiling`: is this transaction's priority fee bid at or below N micro-lamports per CU?
+- More planned (compute unit floor, program allowlist, replay protection). See the Guards table below.
 
 Each one is deployed to Solana as its own program with its own address. You don't install a library. You just point your transaction at the guard's program ID and pass it the numbers it needs to check.
 
@@ -66,7 +67,7 @@ See [`sdk/README.md`](sdk/README.md) for the full API, and [`sdk/examples/`](sdk
 | `slippage` | Done | 1 token acct | `u64 min_amount` (LE) | 7 | [src](src/slippage/slippage.s) |
 | `balance_floor` | Done | 1 | `u64 min_lamports` (LE) | 7 | [src](src/balance_floor/balance_floor.s) |
 | `signer_allowlist` | Done | 1 signer | `u8 count`, `[32]u8 × count` | 25 (N=1) | [src](src/signer_allowlist/signer_allowlist.s) |
-| `fee_ceiling` | todo | 1 sysvar | `u64 max_micro_lamports` (LE) | - | - |
+| `fee_ceiling` | Done | 1 sysvar | `u64 max_micro_lamports` (LE) | ~150 | [src](src/fee_ceiling/fee_ceiling.s) |
 | `compute_unit_floor` | todo | 1 sysvar | `u32 min_units` (LE) | - | - |
 | `program_allowlist` | todo | 1 sysvar | `u8 count`, `[32]u8 × count` | - | - |
 | `nonce_guard` | todo (stateful) | 1 PDA | `[32]u8 nonce` | - | - |
@@ -154,6 +155,18 @@ Attach `signer_allowlist([pubkeys])` with the transaction signer as account 0 to
 The guard also verifies the account's on-chain `is_signer` byte equals 1 (not just trusting the SDK to set `AccountMeta.isSigner = true`). If you build the instruction from a different SDK and forget to mark the account as a signer, the program exits 3 (invalid account) rather than silently accepting any pubkey.
 
 [assembly](src/signer_allowlist/signer_allowlist.s) · [integration test](tests/signer_allowlist.test.ts)
+
+## fee_ceiling
+
+Attach `fee_ceiling(max_micro_lamports)` with the Instructions sysvar as account 0 to enforce "no `ComputeBudget` `SetComputeUnitPrice` in this transaction exceeds the ceiling." Useful for keeper bots and agent flows that want a hard cap on priority fee bidding so a misconfigured client can't quietly burn tens of dollars on a tx that should cost a fraction of a cent.
+
+- Stateless, 1 read-only sysvar account (`Sysvar1nstructions1111111111111111111111111`), 8 bytes of instruction data.
+- No syscalls. Walks the Instructions sysvar's serialized data to find every `ComputeBudget` instruction and compares any `SetComputeUnitPrice` against the ceiling.
+- ~150 CU on the happy path; scales linearly with `num_instructions` in the tx.
+
+Unlike the other guards, the Instructions sysvar's per-account input region is bounded at `0x60 + data_len` with no realloc padding and no accessible `rent_epoch`. The guard reads its own `max_micro_lamports` from inside the sysvar's serialization (via the trailing `current_instruction_index` and the offsets table) rather than from the standard input layout that `slippage` and `signer_allowlist` use.
+
+[assembly](src/fee_ceiling/fee_ceiling.s) · [integration test](tests/fee_ceiling.test.ts)
 
 ## Repo layout
 
