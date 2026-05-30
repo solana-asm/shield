@@ -25,6 +25,7 @@ export type BuildRequest = {
   network: "devnet" | "mainnet";
   enabled: Record<GuardSlug, boolean>;
   params: Record<GuardSlug, Record<string, string>>;
+  signerOverride?: string;
 };
 
 export type SimulationResult =
@@ -59,7 +60,11 @@ function parsePubkeyList(value: string): PublicKey[] {
 function buildGuardInstruction(
   slug: GuardSlug,
   rawParams: Record<string, string>,
-  ctx: { feePayer: PublicKey; currentSlot: number }
+  ctx: {
+    feePayer: PublicKey;
+    signerOverride: PublicKey | null;
+    currentSlot: number;
+  }
 ): TransactionInstruction {
   switch (slug) {
     case "slot_deadline": {
@@ -95,13 +100,14 @@ function buildGuardInstruction(
       });
     }
     case "signer_allowlist": {
+      const signerPubkey = ctx.signerOverride ?? ctx.feePayer;
       const allowedRaw = rawParams.allowed ?? "";
       const allowed = allowedRaw.trim()
         ? parsePubkeyList(allowedRaw)
-        : [ctx.feePayer];
+        : [signerPubkey];
       return signerAllowlistIx({
         programId: PROGRAM_IDS.signer_allowlist,
-        signer: ctx.feePayer,
+        signer: signerPubkey,
         allowed,
       });
     }
@@ -149,7 +155,13 @@ export async function simulateShieldedTransaction(
   req: BuildRequest
 ): Promise<SimulationResult> {
   try {
+    // Fee payer always stays the demo wallet (has SOL for sim fees on both
+    // networks). When a real wallet is connected, it gets layered in as the
+    // signer for signer_allowlist only.
     const feePayer = new PublicKey(DEFAULT_FEE_PAYER);
+    const signerOverride = req.signerOverride
+      ? new PublicKey(req.signerOverride)
+      : null;
     const rpcUrl = RPC_URLS[req.network];
     const connection = new Connection(rpcUrl, "confirmed");
 
@@ -173,6 +185,7 @@ export async function simulateShieldedTransaction(
     for (const slug of enabledGuards) {
       const ix = buildGuardInstruction(slug, req.params[slug] ?? {}, {
         feePayer,
+        signerOverride,
         currentSlot,
       });
       ixs.push(ix);

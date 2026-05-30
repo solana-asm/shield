@@ -121,3 +121,24 @@ html > body[data-scroll-locked] {
     @apply font-sans;
   }
 }
+
+/* Override browser autofill background and text on inputs/textareas so they
+   stay on-theme. Chrome animates the background-color and cannot be unset
+   normally, so a large inset box-shadow is used as the visible "background"
+   and the transition is stalled to 5000s to prevent the white flash. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--foreground);
+  -webkit-box-shadow: 0 0 0 1000px var(--secondary) inset;
+  caret-color: var(--foreground);
+  transition:
+    background-color 5000s ease-in-out 0s,
+    color 5000s ease-in-out 0s;
+  font-family: inherit !important;
+}
