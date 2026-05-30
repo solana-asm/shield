@@ -12,10 +12,12 @@
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.2.0",
     "@hugeicons/react": "^1.1.6",
+    "@solana-asm/shield": "^0.5.1",
     "@solana-mobile/wallet-adapter-mobile": "^2.2.8",
     "@solana/compat": "^6.9.0",
     "@solana/kit": "^6.9.0",
     "@solana/wallet-adapter-react": "^0.15.39",
+    "@solana/web3.js": "^1.98.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

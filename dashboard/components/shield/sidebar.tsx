@@ -24,6 +24,33 @@ export function Sidebar({ className }: { className?: string }) {
         </span>
       </Link>
 
+      <nav aria-label="Try it" className="flex flex-col gap-2">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          Try
+        </p>
+        <ul className="flex flex-col">
+          <li>
+            <Link
+              href="/build"
+              className={cn(
+                "group flex items-center justify-between gap-3 rounded-md px-2 py-2",
+                "text-sm font-medium text-muted-foreground transition-colors",
+                "hover:bg-secondary hover:text-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              )}
+            >
+              <span>build a shielded tx</span>
+              <span
+                aria-hidden
+                className="font-mono text-[11px] text-muted-foreground group-hover:text-primary"
+              >
+                →
+              </span>
+            </Link>
+          </li>
+        </ul>
+      </nav>
+
       <nav aria-label="Guards" className="flex flex-col gap-2">
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           Guards
