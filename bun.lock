@@ -15,6 +15,7 @@
         "@types/node": "^25.9.1",
         "chai": "^6.2.2",
         "cross-env": "^7.0.3",
+        "husky": "^9.1.7",
         "mocha": "^10.4.0",
         "tsx": "^4.11.0",
         "typescript": "^6.0.3",
@@ -22,7 +23,7 @@
     },
     "sdk": {
       "name": "@solana-asm/shield",
-      "version": "0.1.0",
+      "version": "0.5.1",
       "devDependencies": {
         "@solana/web3.js": "^1.91.8",
         "@types/bun": "^1.1.0",
@@ -254,6 +255,8 @@
     "he": ["he@1.2.0", "", { "bin": { "he": "bin/he" } }, "sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw=="],
 
     "humanize-ms": ["humanize-ms@1.2.1", "", { "dependencies": { "ms": "^2.0.0" } }, "sha512-Fl70vYtsAFb/C06PTS9dZBo7ihau+Tu/DNCk/OyHhea07S+aeMWpFFkUaXRa8fI+ScZbEI8dfSxwY7gxZ9SAVQ=="],
+
+    "husky": ["husky@9.1.7", "", { "bin": { "husky": "bin.js" } }, "sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA=="],
 
     "ieee754": ["ieee754@1.2.1", "", {}, "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA=="],
 

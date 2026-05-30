@@ -20,7 +20,8 @@
     "deploy:mainnet": "scripts/deploy.sh ${RPC_URL:-https://api.mainnet-beta.solana.com}",
     "release:patch": "scripts/release.sh patch",
     "release:minor": "scripts/release.sh minor",
-    "release:major": "scripts/release.sh major"
+    "release:major": "scripts/release.sh major",
+    "prepare": "husky"
   },
   "dependencies": {
     "@solana-asm/shield": "workspace:*",
@@ -33,6 +34,7 @@
     "@types/node": "^25.9.1",
     "chai": "^6.2.2",
     "cross-env": "^7.0.3",
+    "husky": "^9.1.7",
     "mocha": "^10.4.0",
     "tsx": "^4.11.0",
     "typescript": "^6.0.3"
