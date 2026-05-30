@@ -785,11 +785,13 @@ export const guardContent: Record<string, GuardContent | undefined> = {
       {
         startLine: 13,
         endLine: 15,
-        title: "Reserve a 40-byte buffer on the stack and ask the runtime for the Clock",
+        title: "Carve out a 40-byte buffer on the stack, then ask the runtime to fill it",
         commentary: [
-          "r10 is the stack frame pointer. Subtracting 40 from it gives a pointer to a 40-byte slot at the top of our stack frame. (sBPF stacks grow downward, same direction as x86 and ARM.) We do this twice: once to hand the pointer to the syscall in r1, again later to read the result.",
-          "call sol_get_clock_sysvar invokes the runtime's clock syscall. The convention is: pass the destination pointer in r1, runtime writes 40 bytes of live Clock data into that buffer, then returns.",
-          "This is the only syscall in slot_deadline and it is the reason the guard costs ~152 CU on the happy path. The arithmetic and compares around it are 1-2 CU each. The syscall is the rest. Reading sysvars is expensive: the runtime has to look up sysvar state, copy it, and validate the call.",
+          "Three instructions, one syscall. Walk through them in order.",
+          "mov64 r1, r10 copies the stack frame pointer (r10) into r1. r10 always points at the top of our stack frame; the runtime sets it up for us at entry.",
+          "sub64 r1, CLOCK_BUF_SIZE subtracts 40 from r1. sBPF stacks grow DOWNWARD (same direction as x86 and ARM), so subtracting walks into our frame instead of off the end of it. After this instruction, r1 points at the start of a 40-byte region we own and can have the runtime write to.",
+          "call sol_get_clock_sysvar invokes the runtime's clock syscall. The Solana syscall ABI puts the first argument in r1, so the runtime knows that r1 IS the destination pointer. It writes 40 bytes of live Clock data into our buffer, then returns.",
+          "This is the only syscall in the entire guard, and it dominates the cost. slot_deadline runs at ~152 CU on the happy path; the four arithmetic and compare instructions around it are 1-2 CU each. The remaining ~140 CU is the syscall itself (the runtime has to look up sysvar state, copy 40 bytes into our buffer, and validate the call).",
         ],
       },
       {

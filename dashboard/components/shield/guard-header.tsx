@@ -42,7 +42,7 @@ export function GuardHeader({ guard }: { guard: Guard }) {
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             program id
           </span>
-          <code className="min-w-0 flex-1 truncate font-mono text-sm text-foreground" title={guard.programId}>
+          <code className="min-w-0 flex-1 truncate font-mono text-sm text-primary" title={guard.programId}>
             {guard.programId}
           </code>
           <CopyButton value={guard.programId} label="Copy" />

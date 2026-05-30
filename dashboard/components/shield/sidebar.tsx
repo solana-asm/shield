@@ -1,8 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { guards, externalLinks } from "@/lib/guards";
 
 export function Sidebar({ className }: { className?: string }) {
+  const pathname = usePathname();
+  const isBuildActive = pathname === "/build";
+
   return (
     <aside
       className={cn(
@@ -32,17 +38,24 @@ export function Sidebar({ className }: { className?: string }) {
           <li>
             <Link
               href="/build"
+              aria-current={isBuildActive ? "page" : undefined}
               className={cn(
                 "group flex items-center justify-between gap-3 rounded-md px-2 py-2",
-                "text-sm font-medium text-muted-foreground transition-colors",
+                "text-sm font-medium transition-colors",
                 "hover:bg-secondary hover:text-foreground",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                isBuildActive
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground"
               )}
             >
               <span>build a shielded tx</span>
               <span
                 aria-hidden
-                className="font-mono text-[11px] text-muted-foreground group-hover:text-primary"
+                className={cn(
+                  "font-mono text-[11px] transition-colors group-hover:text-primary",
+                  isBuildActive ? "text-primary" : "text-muted-foreground"
+                )}
               >
                 →
               </span>
@@ -56,24 +69,36 @@ export function Sidebar({ className }: { className?: string }) {
           Guards
         </p>
         <ul className="flex flex-col">
-          {guards.map((g) => (
-            <li key={g.slug}>
-              <Link
-                href={`/guards/${g.slug}`}
-                className={cn(
-                  "group flex items-center justify-between gap-3 rounded-md px-2 py-2",
-                  "text-sm font-medium text-muted-foreground transition-colors",
-                  "hover:bg-secondary hover:text-foreground",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                )}
-              >
-                <span className="font-mono">{g.name}</span>
-                <span className="font-mono text-[11px] tabular-nums text-muted-foreground group-hover:text-primary">
-                  {g.cu}
-                </span>
-              </Link>
-            </li>
-          ))}
+          {guards.map((g) => {
+            const isActive = pathname === `/guards/${g.slug}`;
+            return (
+              <li key={g.slug}>
+                <Link
+                  href={`/guards/${g.slug}`}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "group flex items-center justify-between gap-3 rounded-md px-2 py-2",
+                    "text-sm font-medium transition-colors",
+                    "hover:bg-secondary hover:text-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    isActive
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <span className="font-mono">{g.name}</span>
+                  <span
+                    className={cn(
+                      "font-mono text-[11px] tabular-nums transition-colors group-hover:text-primary",
+                      isActive ? "text-primary" : "text-muted-foreground"
+                    )}
+                  >
+                    {g.cu}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
