@@ -11,29 +11,24 @@ export function AssemblyWalkthrough({
   const allLines = assembly.replace(/\n+$/g, "").split("\n");
 
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-14">
       {blocks.map((block, i) => {
         const slice = allLines
           .slice(block.startLine - 1, block.endLine)
           .join("\n");
+        const lineLabel =
+          block.endLine !== block.startLine
+            ? `lines ${block.startLine}-${block.endLine}`
+            : `line ${block.startLine}`;
         return (
           <article
             key={`${block.startLine}-${block.endLine}`}
-            className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-10"
             aria-labelledby={`block-${i}-title`}
+            className="flex flex-col gap-4 border-l border-border/60 pl-5 sm:pl-6"
           >
-            <div className="lg:sticky lg:top-6 lg:col-span-7 lg:self-start">
-              <CodeBlock
-                code={slice}
-                language="sbpf"
-                startLine={block.startLine}
-                ariaLabel={`Lines ${block.startLine} to ${block.endLine}`}
-              />
-            </div>
-            <div className="flex flex-col gap-3 lg:col-span-5">
+            <header className="flex flex-col gap-1.5">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                lines {block.startLine}
-                {block.endLine !== block.startLine ? `-${block.endLine}` : ""}
+                {lineLabel}
               </p>
               <h3
                 id={`block-${i}-title`}
@@ -41,11 +36,17 @@ export function AssemblyWalkthrough({
               >
                 {block.title}
               </h3>
-              <div className="flex flex-col gap-3 text-[15px] leading-7 text-muted-foreground">
-                {block.commentary.map((p, j) => (
-                  <p key={j}>{p}</p>
-                ))}
-              </div>
+            </header>
+            <CodeBlock
+              code={slice}
+              language="sbpf"
+              startLine={block.startLine}
+              ariaLabel={lineLabel}
+            />
+            <div className="flex flex-col gap-3 text-[15px] leading-7 text-muted-foreground">
+              {block.commentary.map((p, j) => (
+                <p key={j}>{p}</p>
+              ))}
             </div>
           </article>
         );
