@@ -10,3 +10,6 @@ package-lock.json
 test-ledger
 yarn.lock
 target
+
+# Local Claude Code instructions, not for public repo
+CLAUDE.md

@@ -19,10 +19,10 @@ export function AssemblyWalkthrough({
         return (
           <article
             key={`${block.startLine}-${block.endLine}`}
-            className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-10"
+            className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-10"
             aria-labelledby={`block-${i}-title`}
           >
-            <div className="lg:col-span-7">
+            <div className="lg:sticky lg:top-6 lg:col-span-7 lg:self-start">
               <CodeBlock
                 code={slice}
                 language="sbpf"
@@ -33,7 +33,7 @@ export function AssemblyWalkthrough({
             <div className="flex flex-col gap-3 lg:col-span-5">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 lines {block.startLine}
-                {block.endLine !== block.startLine ? `–${block.endLine}` : ""}
+                {block.endLine !== block.startLine ? `-${block.endLine}` : ""}
               </p>
               <h3
                 id={`block-${i}-title`}

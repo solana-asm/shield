@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { GuardHeader } from "@/components/shield/guard-header";
 import { CodeBlock } from "@/components/shield/code-block";
 import { AssemblyWalkthrough } from "@/components/shield/assembly-walkthrough";
+import { AssemblyPrimer } from "@/components/shield/assembly-primer";
 import { ExitCodesTable } from "@/components/shield/exit-codes-table";
 import { Footer } from "@/components/shield/footer";
 import { guards } from "@/lib/guards";
@@ -70,10 +71,13 @@ export default async function GuardPage({
 
       {content.detailed && content.assembly && content.blocks && (
         <Section title="Assembly walkthrough">
-          <AssemblyWalkthrough
-            assembly={content.assembly}
-            blocks={content.blocks}
-          />
+          <div className="flex flex-col gap-10">
+            <AssemblyPrimer />
+            <AssemblyWalkthrough
+              assembly={content.assembly}
+              blocks={content.blocks}
+            />
+          </div>
         </Section>
       )}
 
