@@ -41,6 +41,10 @@ export function AssemblyPrimer() {
           bytes from memory, zero-extended into a 64-bit register. Stores are{" "}
           <code className="font-mono text-foreground">stx*</code> with matching
           widths.{" "}
+          <code className="font-mono text-foreground">lddw</code> loads an
+          8-byte immediate (usually the address of a{" "}
+          <code className="font-mono text-foreground">.rodata</code> constant)
+          directly into a register.{" "}
           <code className="font-mono text-foreground">jeq</code>/
           <code className="font-mono text-foreground">jne</code>/
           <code className="font-mono text-foreground">jlt</code>/
@@ -49,8 +53,22 @@ export function AssemblyPrimer() {
           <code className="font-mono text-foreground">jle</code> compare two
           registers (or a register and an immediate) and conditionally jump to
           a label.{" "}
+          <code className="font-mono text-foreground">ja</code> is an
+          unconditional jump.{" "}
+          <code className="font-mono text-foreground">mov64</code>/
+          <code className="font-mono text-foreground">add64</code>/
+          <code className="font-mono text-foreground">sub64</code>/
+          <code className="font-mono text-foreground">mul64</code>/
+          <code className="font-mono text-foreground">lsh64</code> are the
+          usual 64-bit arithmetic and shift ops.{" "}
           <code className="font-mono text-foreground">call sol_*</code> invokes
-          a Solana runtime syscall (the CU budget includes the syscall cost).{" "}
+          a Solana runtime syscall (the CU budget includes the syscall cost; the
+          ABI lets the syscall overwrite{" "}
+          <code className="font-mono text-foreground">r0</code>-
+          <code className="font-mono text-foreground">r5</code>, so anything you
+          need to keep across the call has to live in{" "}
+          <code className="font-mono text-foreground">r6</code>-
+          <code className="font-mono text-foreground">r9</code>).{" "}
           <code className="font-mono text-foreground">exit</code> returns{" "}
           <code className="font-mono text-foreground">r0</code> to the runtime.
         </p>

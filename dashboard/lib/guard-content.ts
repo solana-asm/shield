@@ -1192,9 +1192,9 @@ export const guardContent: Record<string, GuardContent | undefined> = {
         title: "Skip the ix header to land on our own ceiling u64",
         commentary: [
           "r4 = r3 + r9 = the base of our own ix's serialized form within the sysvar. Each serialized ix has this layout: 2-byte num_accounts, then num_accounts account metas (33 bytes each = 1 flag byte + 32-byte pubkey), then 32-byte program_id, then 2-byte ix_data_len, then ix_data.",
-          "ldxh r5, [r4 + 0] reads num_accounts. We need to skip past: 2 bytes (num_accounts) + 33 * num_accounts (account metas) + 32 (program_id) = 34 + 33 * num_accounts. lsh64 r4, 1 then add64 r4, 1 would not work in one go, so the code splits: mul64 r9, 33; add64 r9, 34; add64 r9, r4. r9 = pointer to our ix_data_len.",
+          "ldxh r5, [r4 + 0] reads num_accounts. We need to skip past: 2 bytes (num_accounts) + 33 * num_accounts (account metas) + 32 (program_id) = 34 + 33 * num_accounts. sBPF has no multiply-add instruction, so the code splits it into three steps: mul64 r9, 33; add64 r9, 34; add64 r9, r4. r9 = pointer to our ix_data_len.",
           "ldxh r5, [r9 + 0] reads ix_data_len. jne r5, 8, bad_ix_data verifies it equals 8.",
-          "ldxdw r6, [r9 + 2] reads the u64 ceiling from our ix data, 8 bytes past the length field. The +2 is because ix_data_len is a u16 (2 bytes), not a u64. r6 now holds the per-CU ceiling for the rest of the program.",
+          "ldxdw r6, [r9 + 2] reads the u64 ceiling from our ix data. The +2 skips past the 2-byte ix_data_len header to land on the first byte of the actual ix data. r6 now holds the per-CU ceiling for the rest of the program.",
         ],
       },
       {
