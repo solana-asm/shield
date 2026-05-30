@@ -9,7 +9,7 @@ export function Footer() {
             shield.sbpf.dev
           </p>
           <p className="text-xs text-muted-foreground">
-            Built by Prianshu Patel for the Solana Fellowship 2026.
+            Built by Priyansh Patel for the Solana Fellowship 2026.
           </p>
         </div>
         <ul className="flex items-center gap-5 font-mono text-xs text-muted-foreground">
