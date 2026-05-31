@@ -6,7 +6,9 @@ import { CodeBlock } from "@/components/shield/code-block";
 import { AssemblyWalkthrough } from "@/components/shield/assembly-walkthrough";
 import { AssemblyPrimer } from "@/components/shield/assembly-primer";
 import { ExitCodesTable } from "@/components/shield/exit-codes-table";
+import { AllowlistCuCalculator } from "@/components/shield/allowlist-cu-calculator";
 import { Footer } from "@/components/shield/footer";
+import { allowlistCuModels } from "@/lib/allowlist-cu-models";
 import { guards } from "@/lib/guards";
 import { guardContent } from "@/lib/guard-content";
 
@@ -55,6 +57,12 @@ export default async function GuardPage({
           ))}
         </div>
       </Section>
+
+      {allowlistCuModels[slug] && (
+        <Section title="CU calculator">
+          <AllowlistCuCalculator {...allowlistCuModels[slug]!} />
+        </Section>
+      )}
 
       <Section title="How to use it">
         <CodeBlock
