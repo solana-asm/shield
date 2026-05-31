@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { guards, externalLinks } from "@/lib/guards";
+import { guards, externalLinks, shieldSdkVersion } from "@/lib/guards";
 
 export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
@@ -114,7 +114,7 @@ export function Sidebar({ className }: { className?: string }) {
       </nav>
 
       <div className="mt-auto flex items-center justify-between border-t border-border pt-4 font-mono text-[11px] text-muted-foreground">
-        <span>v0.5.0</span>
+        <span>{shieldSdkVersion}</span>
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
           mainnet

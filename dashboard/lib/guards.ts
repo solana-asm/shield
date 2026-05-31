@@ -90,6 +90,10 @@ export const guards: Guard[] = [
   },
 ];
 
+import shieldPkg from "@solana-asm/shield/package.json";
+
+export const shieldSdkVersion = `v${shieldPkg.version}`;
+
 export const externalLinks = {
   npm: "https://www.npmjs.com/package/@solana-asm/shield",
   github: "https://github.com/solana-asm/shield",

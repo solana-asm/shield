@@ -1,4 +1,7 @@
-import { externalLinks } from "@/lib/guards";
+import { externalLinks, shieldSdkVersion } from "@/lib/guards";
+import { IconCopyButton } from "@/components/shield/icon-copy-button";
+
+const INSTALL_COMMAND = "npm install @solana-asm/shield";
 
 export function Hero() {
   return (
@@ -34,13 +37,20 @@ export function Hero() {
               <span className="text-muted-foreground" aria-hidden>
                 $&nbsp;
               </span>
-              npm install @solana-asm/shield
+              npm install <span className="text-primary">@solana-asm/shield</span>
             </span>
-            <span
-              className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-muted-foreground"
-              aria-hidden
-            >
-              v0.5.0
+            <span className="flex shrink-0 items-center gap-3">
+              <span
+                className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground"
+                aria-hidden
+              >
+                {shieldSdkVersion}
+              </span>
+              <IconCopyButton
+                value={INSTALL_COMMAND}
+                ariaLabelPrefix="Copy install command"
+                label="copy install command"
+              />
             </span>
           </div>
 
