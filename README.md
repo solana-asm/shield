@@ -33,7 +33,12 @@ Each one is deployed to Solana as its own program with its own address. You don'
 
 Putting it together: a swap with deadline, slippage, and balance-floor protection adds about 166 compute units on top of the swap itself, and works on top of any program you didn't write and can't change.
 
-## Quick Start
+## Try it without cloning
+
+- **Live demo**: [shield.sbpf.dev](https://shield.sbpf.dev) builds a transaction with up to four guards, simulates against devnet or mainnet, and shows the per-guard CU cost and the abort log.
+- **SDK on npm**: [`@solana-asm/shield`](https://www.npmjs.com/package/@solana-asm/shield). All guard program IDs are the same on devnet and mainnet (see below).
+
+## Quick Start (SDK)
 
 ```bash
 npm install @solana-asm/shield @solana/web3.js
@@ -95,9 +100,20 @@ Live on devnet and mainnet at the same addresses. Both clusters share the keypai
 
 Before exiting non-zero, each guard `sol_log_`s a short message so devnet diagnostics are usable without a custom client (`"deadline missed"`, `"bad ix data"`, `"insufficient"`, `"below floor"`, `"not allowed"`, `"fee too high"`, `"cu too low"`, `"bad account"`).
 
-## Workspace commands
+## Building from source
+
+### Prerequisites
+
+- [Bun](https://bun.sh) (workspace runtime, replaces npm)
+- [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools) (`solana --version` ≥ 1.18). The test runner reads the keypair at `solana config get` and the deploy script shells out to `solana program deploy`.
+- [`sbpf`](https://github.com/blueshift-gg/sbpf) assembler (`cargo install sbpf`). Provides `sbpf build` used to compile every `.s` to `deploy/*.so`.
+- For `bun run test:local` / `deploy:local`: a running `solana-test-validator` on `127.0.0.1:8899`.
+- For `bun run test:devnet` and `example:devnet`: a Solana CLI keypair with some devnet SOL (`solana airdrop 2 --url devnet`).
+
+### Workspace commands
 
 ```bash
+git clone https://github.com/solana-asm/shield && cd shield
 bun install                       # install root + sdk workspace
 sbpf build                        # build every .s into deploy/*.so
 bun run deploy:local              # deploy all programs to a local validator
@@ -203,6 +219,7 @@ sdk/                  @solana-asm/shield TypeScript client
   src/                builders, errors, util
   test/               offline bun:test unit tests
   examples/           runnable per-guard demos
+dashboard/            next.js app served at shield.sbpf.dev
 scripts/              deploy.sh, test.sh, test-sdk.sh, example.sh
 ```
 
