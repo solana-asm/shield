@@ -13,3 +13,6 @@ target
 
 # Local Claude Code instructions, not for public repo
 CLAUDE.md
+# Added by code-review-graph
+.code-review-graph/
+.claude
