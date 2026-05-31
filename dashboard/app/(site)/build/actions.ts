@@ -28,6 +28,27 @@ export type BuildRequest = {
   signerOverride?: string;
 };
 
+export type CompiledIxView = {
+  programIdIndex: number;
+  programId: string;
+  programLabel: string;
+  accountKeyIndexes: number[];
+  dataHex: string;
+  dataLen: number;
+};
+
+export type CompiledMessageView = {
+  header: {
+    numRequiredSignatures: number;
+    numReadonlySignedAccounts: number;
+    numReadonlyUnsignedAccounts: number;
+  };
+  recentBlockhash: string;
+  accountKeys: string[];
+  instructions: CompiledIxView[];
+  byteLength: number;
+};
+
 export type SimulationResult =
   | {
       ok: true;
@@ -36,7 +57,13 @@ export type SimulationResult =
       unitsConsumed: number;
       err: null;
       failedAt: number | null;
-      programs: { slug: GuardSlug; name: string; programId: string }[];
+      programs: {
+        slug: GuardSlug;
+        name: string;
+        programId: string;
+        cu: number | null;
+      }[];
+      compiled: CompiledMessageView;
     }
   | {
       ok: false;
@@ -151,6 +178,34 @@ const GUARD_ORDER: GuardSlug[] = [
   "slippage",
 ];
 
+const SYSTEM_PROGRAM_ID = "11111111111111111111111111111111";
+const COMPUTE_BUDGET_PROGRAM_ID = "ComputeBudget111111111111111111111111111111";
+
+function labelForProgramId(
+  pid: string,
+  guardMap: Map<string, GuardSlug>
+): string {
+  const guard = guardMap.get(pid);
+  if (guard) return guard;
+  if (pid === SYSTEM_PROGRAM_ID) return "system_program";
+  if (pid === COMPUTE_BUDGET_PROGRAM_ID) return "compute_budget";
+  return `${pid.slice(0, 4)}…${pid.slice(-4)}`;
+}
+
+const PROGRAM_CU_LINE =
+  /^Program (\S+) consumed (\d+) of \d+ compute units$/;
+
+function parsePerProgramCu(logs: string[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const line of logs) {
+    const m = line.match(PROGRAM_CU_LINE);
+    if (!m) continue;
+    const [, pid, cu] = m;
+    map.set(pid, (map.get(pid) ?? 0) + Number(cu));
+  }
+  return map;
+}
+
 export async function simulateShieldedTransaction(
   req: BuildRequest
 ): Promise<SimulationResult> {
@@ -230,14 +285,54 @@ export async function simulateShieldedTransaction(
       if (Array.isArray(ie) && typeof ie[0] === "number") failedAt = ie[0];
     }
 
+    const logs = sim.value.logs ?? [];
+    const cuByProgram = parsePerProgramCu(logs);
+
+    const programsWithCu = programsUsed.map((p) => ({
+      ...p,
+      cu: cuByProgram.get(p.programId) ?? null,
+    }));
+
+    const guardPidToSlug = new Map<string, GuardSlug>(
+      programsUsed.map((p) => [p.programId, p.slug])
+    );
+
+    const accountKeys = message.staticAccountKeys.map((k) => k.toBase58());
+    const compiledInstructions = message.compiledInstructions.map((ix) => {
+      const pid = accountKeys[ix.programIdIndex];
+      const dataBuf = Buffer.from(ix.data);
+      return {
+        programIdIndex: ix.programIdIndex,
+        programId: pid,
+        programLabel: labelForProgramId(pid, guardPidToSlug),
+        accountKeyIndexes: Array.from(ix.accountKeyIndexes),
+        dataHex: dataBuf.toString("hex"),
+        dataLen: dataBuf.length,
+      };
+    });
+
+    const serialized = tx.serialize();
+
     return {
       ok: true,
       network: req.network,
-      logs: sim.value.logs ?? [],
+      logs,
       unitsConsumed: sim.value.unitsConsumed ?? 0,
       err: null,
       failedAt,
-      programs: programsUsed,
+      programs: programsWithCu,
+      compiled: {
+        header: {
+          numRequiredSignatures: message.header.numRequiredSignatures,
+          numReadonlySignedAccounts: message.header.numReadonlySignedAccounts,
+          numReadonlyUnsignedAccounts:
+            message.header.numReadonlyUnsignedAccounts,
+        },
+        recentBlockhash: message.recentBlockhash,
+        accountKeys,
+        instructions: compiledInstructions,
+        byteLength: serialized.length,
+      },
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
