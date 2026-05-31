@@ -4,14 +4,9 @@ export function Footer() {
   return (
     <footer className="border-t border-border px-6 py-10 sm:px-12">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <p className="font-mono text-sm font-semibold text-foreground">
-            shield.sbpf.dev
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Built by Priyansh Patel for the Solana Fellowship 2026.
-          </p>
-        </div>
+        <p className="font-mono text-sm font-semibold text-foreground">
+          shield.sbpf.dev
+        </p>
         <ul className="flex items-center gap-5 font-mono text-xs text-muted-foreground">
           <li>
             <a
